@@ -27,21 +27,21 @@ data class ReservationDto(
 
 // Detailed booking response from GetBookingById
 data class BookingDetailDto(
-    val id: String,
+    val id: String? = null,
     @SerializedName("bookingNumber")
-    val bookingNumber: String,
+    val bookingNumber: String? = null,
     @SerializedName("evOwnerNIC")
-    val evOwnerNIC: String,
+    val evOwnerNIC: String? = null,
     @SerializedName("chargingStationId")
-    val chargingStationId: String,
+    val chargingStationId: String? = null,
     @SerializedName("reservationDateTime")
-    val reservationDateTime: String,
+    val reservationDateTime: String? = null,
     @SerializedName("status")
-    val status: String,
+    val status: String? = null,
     @SerializedName("timestamp")
-    val timestamp: Long,
+    val timestamp: Long? = null,
     @SerializedName("creationTime")
-    val creationTime: String,
+    val creationTime: String? = null,
     @SerializedName("cancellationReason")
     val cancellationReason: String? = null,
     // Nested station details

@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.hilt.navigation.compose.hiltViewModel
 import lk.chargehere.app.domain.model.Reservation
 import lk.chargehere.app.ui.viewmodel.ReservationsViewModel
@@ -37,15 +38,20 @@ fun ModernReservationsScreen(
     var selectedTab by remember { mutableStateOf(0) }
     val tabs = listOf("Upcoming", "Past")
 
+    // Dialog state at screen level
+    var showCancelDialog by remember { mutableStateOf(false) }
+    var reservationToCancel by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) {
         viewModel.loadReservations()
     }
 
     // === CLARITY DESIGN SYSTEM IMPLEMENTATION ===
-    ClarityBackground {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        ClarityBackground {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
             // Top spacing for status bar
             Spacer(modifier = Modifier.height(ClaritySpacing.xxxl))
 
@@ -86,7 +92,10 @@ fun ModernReservationsScreen(
                     reservations = uiState.upcomingReservations,
                     isLoading = uiState.isLoading,
                     onReservationClick = onNavigateToReservationDetail,
-                    onCancelReservation = { viewModel.cancelReservation(it) }
+                    onCancelClick = { reservationId ->
+                        reservationToCancel = reservationId
+                        showCancelDialog = true
+                    }
                 )
                 1 -> ClarityPastReservations(
                     reservations = uiState.pastReservations,
@@ -94,6 +103,22 @@ fun ModernReservationsScreen(
                     onReservationClick = onNavigateToReservationDetail
                 )
             }
+        }
+    }
+
+        // Render dialog at screen root level for proper overlay
+        if (showCancelDialog && reservationToCancel != null) {
+            ClarityCancelReservationDialog(
+                onDismiss = {
+                    showCancelDialog = false
+                    reservationToCancel = null
+                },
+                onConfirm = {
+                    reservationToCancel?.let { viewModel.cancelReservation(it) }
+                    showCancelDialog = false
+                    reservationToCancel = null
+                }
+            )
         }
     }
 }
@@ -111,11 +136,13 @@ private fun ClarityTabRow(
         containerColor = ClarityPureWhite,
         contentColor = ClarityAccentBlue,
         indicator = { tabPositions ->
-            TabRowDefaults.Indicator(
-                modifier = Modifier.wrapContentWidth(Alignment.Start),
-                color = ClarityAccentBlue,
-                height = 2.dp
-            )
+            if (tabPositions.isNotEmpty() && selectedTabIndex < tabPositions.size) {
+                TabRowDefaults.Indicator(
+                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                    color = ClarityAccentBlue,
+                    height = 2.dp
+                )
+            }
         }
     ) {
         tabs.forEachIndexed { index, title ->
@@ -139,7 +166,7 @@ private fun ClarityUpcomingReservations(
     reservations: List<Reservation>,
     isLoading: Boolean,
     onReservationClick: (String) -> Unit,
-    onCancelReservation: (String) -> Unit
+    onCancelClick: (String) -> Unit
 ) {
     when {
         isLoading -> {
@@ -166,7 +193,7 @@ private fun ClarityUpcomingReservations(
                     ClarityUpcomingReservationItem(
                         reservation = reservation,
                         onClick = { onReservationClick(reservation.id) },
-                        onCancel = { onCancelReservation(reservation.id) }
+                        onCancel = { onCancelClick(reservation.id) }
                     )
                 }
                 
@@ -293,8 +320,6 @@ private fun ClarityUpcomingReservationItem(
     onClick: () -> Unit,
     onCancel: () -> Unit
 ) {
-    var showCancelDialog by remember { mutableStateOf(false) }
-    
     ClarityCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -364,10 +389,10 @@ private fun ClarityUpcomingReservationItem(
             ) {
                 ClaritySecondaryButton(
                     text = "Cancel",
-                    onClick = { showCancelDialog = true },
+                    onClick = onCancel,
                     modifier = Modifier.weight(1f)
                 )
-                
+
                 ClarityPrimaryButton(
                     text = "View Details",
                     onClick = onClick,
@@ -375,17 +400,6 @@ private fun ClarityUpcomingReservationItem(
                 )
             }
         }
-    }
-    
-    // Cancel confirmation dialog
-    if (showCancelDialog) {
-        ClarityCancelReservationDialog(
-            onDismiss = { showCancelDialog = false },
-            onConfirm = {
-                onCancel()
-                showCancelDialog = false
-            }
-        )
     }
 }
 

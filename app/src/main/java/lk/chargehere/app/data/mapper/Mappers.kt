@@ -110,29 +110,29 @@ fun ReservationDto.toEntity(): ReservationEntity {
 // BookingDetailDto Mappers - For detailed booking responses
 fun BookingDetailDto.toEntity(): ReservationEntity {
     return ReservationEntity(
-        reservationId = id,
-        stationId = chargingStationId,
-        userId = evOwnerNIC,
-        status = status,
-        startTimestamp = parseISOToTimestamp(reservationDateTime),
+        reservationId = id ?: "",
+        stationId = chargingStationId ?: "",
+        userId = evOwnerNIC ?: "",
+        status = status ?: "PENDING",
+        startTimestamp = parseISOToTimestamp(reservationDateTime ?: ""),
         durationMinutes = 60, // Default duration
         qrPayload = bookingNumber, // Use booking number as QR payload
         stationName = null, // Will be populated from station data if needed
-        createdAt = timestamp
+        createdAt = timestamp ?: System.currentTimeMillis()
     )
 }
 
 fun BookingDetailDto.toDomain(): Reservation {
     return Reservation(
-        id = id,
-        stationId = chargingStationId,
-        userId = evOwnerNIC,
-        status = status,
-        startTime = parseISOToTimestamp(reservationDateTime),
+        id = id ?: "",
+        stationId = chargingStationId ?: "",
+        userId = evOwnerNIC ?: "",
+        status = status ?: "PENDING",
+        startTime = parseISOToTimestamp(reservationDateTime ?: ""),
         durationMinutes = 60,
         qrPayload = bookingNumber,
         stationName = "", // Will be populated separately if needed
-        createdAt = timestamp,
+        createdAt = timestamp ?: System.currentTimeMillis(),
         updatedAt = System.currentTimeMillis()
     )
 }
@@ -169,6 +169,10 @@ fun Reservation.toEntity(): ReservationEntity {
 
 // Helper function to parse ISO date string to timestamp
 private fun parseISOToTimestamp(isoString: String): Long {
+    if (isoString.isBlank()) {
+        return System.currentTimeMillis()
+    }
+
     return try {
         java.time.Instant.parse(isoString).toEpochMilli()
     } catch (e: Exception) {
