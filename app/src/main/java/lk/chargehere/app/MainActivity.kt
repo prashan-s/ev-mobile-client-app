@@ -26,6 +26,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        android.util.Log.d("MainActivity", "MainActivity onCreate called")
+
         // Initialize Google Sign-In
         googleSignInManager.initialize(this)
 
