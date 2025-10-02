@@ -26,11 +26,20 @@ data class Station(
     val latitude: Double,
     val longitude: Double,
     val maxPower: Double, // Changed from maxKw to maxPower
+    val chargerType: String = "AC", // AC or DC from API
     val isReservable: Boolean = true,
     val isAvailable: Boolean = true,
     val distanceMeters: Double? = null,
+    val operatingHours: List<OperatingHour>? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
+)
+
+data class OperatingHour(
+    val dayOfWeek: String,
+    val startTime: String,
+    val endTime: String,
+    val isOpen: Boolean
 )
 
 data class Reservation(
