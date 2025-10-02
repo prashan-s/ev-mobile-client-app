@@ -51,7 +51,8 @@ data class RegisterResponse(
 )
 
 data class LoginResponse(
-    val token: String
+    val accessToken: String,
+    val nic: String
 )
 
 data class UserDto(

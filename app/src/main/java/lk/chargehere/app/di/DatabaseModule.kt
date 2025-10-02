@@ -22,7 +22,9 @@ object DatabaseModule {
             context.applicationContext,
             ChargeHereDatabase::class.java,
             ChargeHereDatabase.DATABASE_NAME
-        ).build()
+        )
+        .fallbackToDestructiveMigration() // Recreate DB on schema change (for development)
+        .build()
     }
     
     @Provides

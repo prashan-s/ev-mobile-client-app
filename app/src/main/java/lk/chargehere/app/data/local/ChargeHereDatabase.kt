@@ -14,7 +14,7 @@ import lk.chargehere.app.data.local.entities.*
         ReservationEntity::class,
         OperatorSessionEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class ChargeHereDatabase : RoomDatabase() {
@@ -36,7 +36,9 @@ abstract class ChargeHereDatabase : RoomDatabase() {
                     context.applicationContext,
                     ChargeHereDatabase::class.java,
                     DATABASE_NAME
-                ).build()
+                )
+                .fallbackToDestructiveMigration() // For development - recreates DB on schema change
+                .build()
                 INSTANCE = instance
                 instance
             }

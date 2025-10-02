@@ -14,9 +14,10 @@ import javax.inject.Singleton
 @Singleton
 class UserRepository @Inject constructor(
     private val authApiService: AuthApiService,
-    private val userDao: UserDao
+    private val userDao: UserDao,
+    private val tokenManager: lk.chargehere.app.auth.TokenManager
 ) {
-    
+
     // Register EVOwner with email/password
     suspend fun register(
         nic: String,
@@ -42,7 +43,7 @@ class UserRepository @Inject constructor(
                             userDao.insertUser(userEntity)
                             // For registration, we need to login to get the token
                             val loginResponse = authApiService.login(LoginRequest(email, password))
-                            val token = loginResponse.body() ?: ""
+                            val token = loginResponse.body()?.accessToken ?: ""
                             Result.Success(Pair(userEntity.toDomain(), token))
                         } else {
                             Result.Error("Registration failed: No user data received")
@@ -65,20 +66,51 @@ class UserRepository @Inject constructor(
     // Login EVOwner with email/password
     suspend fun login(email: String, password: String): Result<Pair<User, String>> {
         return try {
+            android.util.Log.d("UserRepository", "Login attempt for email: $email")
             val request = LoginRequest(email, password)
             val response = authApiService.login(request)
-            
+
             if (response.isSuccessful) {
-                val token = response.body()
-                if (token != null) {
-                    // Try to get NIC from local cache first, or extract from token
-                    val cachedUser = userDao.getUserByEmail(email)
-                    if (cachedUser != null) {
-                        Result.Success(Pair(cachedUser.toDomain(), token))
+                val loginResponse = response.body()
+                android.util.Log.d("UserRepository", "Login response received: ${loginResponse != null}")
+
+                if (loginResponse != null) {
+                    // Get NIC and access token directly from login response
+                    val nic = loginResponse.nic
+                    val token = loginResponse.accessToken
+
+                    android.util.Log.d("UserRepository", "NIC from response: $nic")
+                    android.util.Log.d("UserRepository", "Token from response: ${token.take(50)}...")
+
+                    // IMPORTANT: Save token to SharedPreferences IMMEDIATELY so it's available for next API call
+                    android.util.Log.d("UserRepository", "Saving token to SharedPreferences before profile fetch")
+                    tokenManager.saveTokens(token, "", 3600)
+
+                    // Fetch user profile from API using the NIC (Bearer token will now be included)
+                    val profileResponse = authApiService.getProfileByNIC(nic)
+
+                    if (profileResponse.isSuccessful) {
+                        val userDto = profileResponse.body()
+                        if (userDto != null) {
+                            // Save user to local database
+                            val userEntity = userDto.toEntity()
+                            userDao.insertUser(userEntity)
+
+                            android.util.Log.d("UserRepository", "Returning Success with token: ${token.take(50)}...")
+                            // Return user and token
+                            Result.Success(Pair(userEntity.toDomain(), token))
+                        } else {
+                            Result.Error("Failed to fetch user profile: No data received")
+                        }
                     } else {
-                        // If no cached user, we need NIC to fetch profile
-                        // This is a limitation - might need to include user data in login response
-                        Result.Error("Login successful but user profile not found locally. Please register first.")
+                        // If profile fetch fails, try to get from cache as fallback
+                        val cachedUser = userDao.getUserByEmail(email)
+                        if (cachedUser != null) {
+                            android.util.Log.d("UserRepository", "Using cached user, returning token: ${token.take(50)}...")
+                            Result.Success(Pair(cachedUser.toDomain(), token))
+                        } else {
+                            Result.Error("Failed to fetch user profile: ${profileResponse.code()}")
+                        }
                     }
                 } else {
                     Result.Error("Login failed: No auth data received")
@@ -88,6 +120,7 @@ class UserRepository @Inject constructor(
                 Result.Error("Login failed: ${response.code()} - $errorBody")
             }
         } catch (e: Exception) {
+            android.util.Log.e("UserRepository", "Login error: ${e.message}", e)
             Result.Error("Network error: ${e.message}")
         }
     }

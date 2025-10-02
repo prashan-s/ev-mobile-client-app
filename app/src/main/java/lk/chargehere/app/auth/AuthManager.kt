@@ -37,15 +37,24 @@ class AuthManager @Inject constructor(
     
     // Email/Password Login for EVOwner
     suspend fun loginEVOwner(email: String, password: String): Result<User> {
+        android.util.Log.d("AuthManager", "loginEVOwner called for email: $email")
         return when (val result = userRepository.login(email, password)) {
             is Result.Success -> {
                 val (user, accessToken) = result.data
+                android.util.Log.d("AuthManager", "Login successful - accessToken: ${accessToken.take(50)}...")
+                android.util.Log.d("AuthManager", "User NIC: ${user.nic}")
+
                 // Save tokens and user info with actual access token and NIC
                 tokenManager.saveTokens(accessToken, "", 3600)
                 tokenManager.saveUserInfo(user.id, user.email, user.role, user.nic)
+
+                android.util.Log.d("AuthManager", "Tokens and user info saved")
                 Result.Success(user)
             }
-            is Result.Error -> result
+            is Result.Error -> {
+                android.util.Log.e("AuthManager", "Login failed: ${result.message}")
+                result
+            }
             is Result.Loading -> Result.Loading
         }
     }

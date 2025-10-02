@@ -4,6 +4,7 @@ import android.Manifest
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -14,12 +15,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Canvas
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -59,9 +66,10 @@ fun ModernHomeScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     
-    // State for selected station (for info window)
+    // State for selected station and bubble position
     var selectedStation by remember { mutableStateOf<Station?>(null) }
     var showInfoWindow by remember { mutableStateOf(false) }
+    var markerScreenPosition by remember { mutableStateOf<Offset?>(null) }
     
     // Location permissions
     val locationPermissions = rememberMultiplePermissionsState(
@@ -80,59 +88,81 @@ fun ModernHomeScreen(
         position = CameraPosition.fromLatLngZoom(defaultLocation, 12f)
     }
 
-    // Request location permission and load nearby stations
+    // Load all stations and upcoming reservations
     LaunchedEffect(Unit) {
-        viewModel.loadNearbyStations(defaultLocation.latitude, defaultLocation.longitude)
+        viewModel.loadAllStations() // Changed to load all stations from /api/v1/charging-stations
         viewModel.loadUpcomingReservations()
     }
 
     // === CLARITY DESIGN SYSTEM IMPLEMENTATION ===
     ClarityBackground {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Full-screen Google Map
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                properties = MapProperties(
-                    isMyLocationEnabled = hasLocationPermission,
-                    mapStyleOptions = null
-                ),
-                uiSettings = MapUiSettings(
-                    zoomControlsEnabled = false,
-                    myLocationButtonEnabled = hasLocationPermission,
-                    mapToolbarEnabled = false
-                )
-            ) {
-                // Add custom markers for charging stations
-                uiState.nearbyStations.forEach { station ->
-                    // Create custom marker icon based on station type and availability
-                    val markerIcon = remember(station.id, station.isAvailable, station.maxPower) {
-                        createChargingStationMarker(
-                            context = context,
-                            stationType = if (station.maxPower > 100) "DC" else "AC",
-                            isAvailable = station.isAvailable
+            // Full-screen Google Map with bubble overlay
+            Box(modifier = Modifier.fillMaxSize()) {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    properties = MapProperties(
+                        isMyLocationEnabled = hasLocationPermission,
+                        mapStyleOptions = null
+                    ),
+                    uiSettings = MapUiSettings(
+                        zoomControlsEnabled = false,
+                        myLocationButtonEnabled = hasLocationPermission,
+                        mapToolbarEnabled = false
+                    )
+                ) {
+                    // Add custom markers for charging stations
+                    uiState.nearbyStations.forEach { station ->
+                        // Create custom marker icon based on station type and availability
+                        val markerIcon = remember(station.id, station.isAvailable, station.maxPower) {
+                            createChargingStationMarker(
+                                context = context,
+                                stationType = if (station.maxPower > 100) "DC" else "AC",
+                                isAvailable = station.isAvailable
+                            )
+                        }
+
+                        Marker(
+                            state = MarkerState(
+                                position = com.google.android.gms.maps.model.LatLng(
+                                    station.latitude,
+                                    station.longitude
+                                )
+                            ),
+                            icon = markerIcon,
+                            title = station.name,
+                            onClick = { marker ->
+                                selectedStation = station
+
+                                // Store marker for screen position calculation
+                                // The bubble will be positioned relative to the marker
+                                markerScreenPosition = Offset(
+                                    x = 0.5f, // Center horizontally (will be adjusted in bubble)
+                                    y = 0.4f  // Position slightly above center
+                                )
+
+                                showInfoWindow = true
+                                true // Return true to consume the event and show our custom bubble
+                            }
                         )
                     }
-                    
-                    MarkerInfoWindowContent(
-                        state = MarkerState(
-                            position = com.google.android.gms.maps.model.LatLng(
-                                station.latitude,
-                                station.longitude
-                            )
-                        ),
-                        icon = markerIcon,
-                        onClick = {
-                            selectedStation = station
-                            showInfoWindow = true
-                            false // Return false to show info window
+                }
+
+                // Bubble popup rendered INSIDE the map view
+                if (showInfoWindow && selectedStation != null && markerScreenPosition != null) {
+                    StationDetailsBubble(
+                        station = selectedStation!!,
+                        markerPosition = markerScreenPosition!!,
+                        onDismiss = {
+                            showInfoWindow = false
+                            selectedStation = null
+                            markerScreenPosition = null
                         },
-                        onInfoWindowClick = {
-                            onNavigateToStationDetail(station.id)
+                        onReserveClick = {
+                            onNavigateToStationDetail(selectedStation!!.id)
                         }
-                    ) {
-                        StationInfoWindowContent(station = station)
-                    }
+                    )
                 }
             }
 
@@ -365,6 +395,7 @@ private fun ClarityNearestStationSection(
                 text = if (station.isAvailable) "Available" else "Occupied",
                 status = if (station.isAvailable) ClarityStatus.Success else ClarityStatus.Error
             )
+            Spacer(modifier = Modifier.height(ClaritySpacing.sm))
         }
         
         Spacer(modifier = Modifier.height(ClaritySpacing.sm))
@@ -472,5 +503,265 @@ private fun LocationPermissionCard(
             onClick = onRequestPermission,
             modifier = Modifier.fillMaxWidth()
         )
+    }
+}
+
+/**
+ * Bubble popup that appears near the tapped marker
+ * Shows detailed information about the charging station
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StationDetailsBubble(
+    station: Station,
+    markerPosition: Offset, // Normalized position (0.0-1.0) of marker on screen
+    onDismiss: () -> Unit,
+    onReserveClick: () -> Unit
+) {
+    // Semi-transparent overlay
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(ClarityOverlay)
+            .clickable(onClick = onDismiss)
+    )
+
+    // Bubble positioned alongside the marker
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        val screenWidth = maxWidth
+        val screenHeight = maxHeight
+
+        // Calculate bubble position - place it slightly above and to the side of the marker
+        val bubbleWidth = 320.dp
+        val bubbleOffset = 24.dp // Distance from marker
+
+        // Position bubble above the marker (marker is at markerPosition.y)
+        val bubbleY = (screenHeight * markerPosition.y) - bubbleOffset - 280.dp
+
+        // Center horizontally
+        val bubbleX = (screenWidth - bubbleWidth) / 2
+
+        Box(
+            modifier = Modifier
+                .width(bubbleWidth)
+                .offset(x = bubbleX, y = bubbleY.coerceAtLeast(ClaritySpacing.xxxl + 80.dp)) // Keep below top bar
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+            // Main bubble card with speech bubble shape
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = false) { } // Prevent clicks from dismissing
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = RoundedCornerShape(20.dp),
+                        ambientColor = ClarityShadow,
+                        spotColor = ClarityShadow
+                    ),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = ClaritySurfaceWhite
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 0.dp
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(ClaritySpacing.md)
+                ) {
+                    // Close button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = ClarityMediumGray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    // Header with station name and type badge
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = station.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = ClarityDarkGray,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.width(ClaritySpacing.xs))
+
+                        // Station type badge
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (station.maxPower > 100) ClarityAccentBlue else ClaritySuccessGreen
+                        ) {
+                            Text(
+                                text = if (station.maxPower > 100) "DC" else "AC",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(
+                                    horizontal = ClaritySpacing.sm,
+                                    vertical = 4.dp
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(ClaritySpacing.sm))
+
+                    // Address
+                    if (!station.address.isNullOrBlank()) {
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = ClarityMediumGray,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(ClaritySpacing.xs))
+                            Text(
+                                text = station.address ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = ClarityMediumGray,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(ClaritySpacing.md))
+                    }
+
+                    // Details in a compact grid
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(ClaritySpacing.sm)
+                    ) {
+                        // Power capacity
+                        BubbleDetailChip(
+                            icon = Icons.Default.Bolt,
+                            text = "${station.maxPower.toInt()}kW",
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // Availability status
+                        BubbleDetailChip(
+                            icon = if (station.isAvailable) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                            text = if (station.isAvailable) "Available" else "Occupied",
+                            backgroundColor = if (station.isAvailable)
+                                ClaritySuccessGreen.copy(alpha = 0.1f)
+                            else
+                                ClarityErrorRed.copy(alpha = 0.1f),
+                            textColor = if (station.isAvailable) ClaritySuccessGreen else ClarityErrorRed,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(ClaritySpacing.md))
+
+                    // Action button
+                    ClarityPrimaryButton(
+                        text = if (station.isReservable) "Reserve Now" else "View Details",
+                        onClick = onReserveClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = Icons.Default.ArrowForward
+                    )
+                }
+            }
+
+                // Triangular pointer pointing down to the marker
+                Canvas(
+                    modifier = Modifier
+                        .size(24.dp, 12.dp)
+                        .offset(y = (-1).dp)
+                ) {
+                    val trianglePath = Path().apply {
+                        // Pointer pointing down to marker
+                        moveTo(size.width / 2f, size.height)
+                        lineTo(size.width / 2f - 12.dp.toPx(), 0f)
+                        lineTo(size.width / 2f + 12.dp.toPx(), 0f)
+                        close()
+                    }
+                    drawPath(
+                        path = trianglePath,
+                        color = Color.White,
+                        style = Fill
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Compact detail chip for bubble popup
+ */
+@Composable
+private fun BubbleDetailChip(
+    icon: ImageVector,
+    text: String,
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = ClarityLightGray,
+    textColor: Color = ClarityDarkGray
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = backgroundColor
+    ) {
+        Row(
+            modifier = Modifier.padding(
+                horizontal = ClaritySpacing.sm,
+                vertical = ClaritySpacing.xs
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = textColor,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = textColor
+            )
+        }
+    }
+}
+
+private fun formatDistance(meters: Int): String {
+    return when {
+        meters < 1000 -> "${meters}m"
+        else -> String.format("%.1f km", meters / 1000.0)
     }
 }

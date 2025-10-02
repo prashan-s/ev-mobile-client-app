@@ -8,7 +8,8 @@ import java.security.MessageDigest
 // User Mappers - Updated for new API structure
 fun UserDto.toEntity(): UserEntity {
     return UserEntity(
-        userId = nic, // Use NIC as user ID
+        userId = java.util.UUID.randomUUID().toString(), // Generate UUID for user ID
+        nic = nic, // Store actual NIC
         nicHash = hashNIC(nic),
         name = "$firstName $lastName",
         email = email,
@@ -20,7 +21,7 @@ fun UserDto.toEntity(): UserEntity {
 fun UserEntity.toDomain(): User {
     return User(
         id = userId,
-        nic = userId, // NIC is stored as userId
+        nic = nic, // Use actual NIC field
         nicHash = nicHash,
         name = name,
         email = email,
@@ -34,7 +35,8 @@ fun UserEntity.toDomain(): User {
 
 fun User.toEntity(): UserEntity {
     return UserEntity(
-        userId = nic, // Use NIC as userId
+        userId = id, // Use id as userId (UUID)
+        nic = nic, // Store actual NIC
         nicHash = nicHash,
         name = name,
         email = email,

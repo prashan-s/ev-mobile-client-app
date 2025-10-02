@@ -12,7 +12,7 @@ interface AuthApiService {
     
     // EVOwner Login - POST /api/v1/evowners/login
     @POST("/api/v1/evowners/login")
-    suspend fun login(@Body request: LoginRequest): Response<String>
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
     
     // Sign In with Google - POST /api/v1/auth/google
     @POST("/api/v1/auth/google")

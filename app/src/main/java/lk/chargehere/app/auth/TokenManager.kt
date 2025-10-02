@@ -128,6 +128,10 @@ class TokenManager @Inject constructor(
     
     fun saveTokens(accessToken: String, refreshToken: String, expiresIn: Long) {
         val expirationTime = System.currentTimeMillis() + (expiresIn * 1000)
+
+        Log.d("TokenManager", "Saving tokens - accessToken preview: ${accessToken.take(50)}...")
+        Log.d("TokenManager", "Token expiration time: $expirationTime")
+
         sharedPreferences.edit().apply {
             putString(KEY_ACCESS_TOKEN, accessToken)
             putString(KEY_REFRESH_TOKEN, refreshToken)
@@ -135,10 +139,17 @@ class TokenManager @Inject constructor(
             putBoolean(KEY_IS_LOGGED_IN, true)
             apply()
         }
+
+        Log.d("TokenManager", "Tokens saved successfully")
     }
-    
+
     fun getAccessToken(): String? {
-        return sharedPreferences.getString(KEY_ACCESS_TOKEN, null)
+        val token = sharedPreferences.getString(KEY_ACCESS_TOKEN, null)
+        Log.d("TokenManager", "Getting access token - exists: ${token != null}")
+        if (token != null) {
+            Log.d("TokenManager", "Token preview: ${token.take(50)}...")
+        }
+        return token
     }
     
     fun getRefreshToken(): String? {
@@ -181,7 +192,17 @@ class TokenManager @Inject constructor(
     }
     
     fun getUserNic(): String? {
-        return sharedPreferences.getString(KEY_USER_NIC, null)
+        val nic = sharedPreferences.getString(KEY_USER_NIC, null)
+
+        // Validate that NIC is not a UUID (from old implementation)
+        // Valid NIC should be alphanumeric without dashes
+        if (nic != null && nic.contains("-")) {
+            // This is likely a UUID, clear it
+            sharedPreferences.edit().remove(KEY_USER_NIC).apply()
+            return null
+        }
+
+        return nic
     }
     
     fun clearTokens() {
