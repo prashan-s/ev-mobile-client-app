@@ -30,8 +30,11 @@ fun ReservationFlowScreen(
     
     LaunchedEffect(uiState.isBookingSuccessful) {
         if (uiState.isBookingSuccessful && uiState.bookingResponse != null) {
-            // Navigate to confirmation with booking ID or timestamp
-            onNavigateToConfirmation(uiState.bookingResponse!!.timestamp.toString())
+            // Navigate to confirmation with booking ID
+            val bookingId = uiState.bookingResponse!!.id?.timestamp?.toString()
+                ?: uiState.bookingResponse!!.bookingNumber
+                ?: "unknown"
+            onNavigateToConfirmation(bookingId)
         }
     }
     
@@ -114,7 +117,60 @@ fun ReservationFlowScreen(
                         }
                         
                         Spacer(modifier = Modifier.height(24.dp))
-                        
+
+                        // Operating Hours Card
+                        if (station.operatingHours != null && station.operatingHours.isNotEmpty()) {
+                            Card(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp)
+                                ) {
+                                    Text(
+                                        text = "Operating Hours",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    // Group operating hours by unique days (remove duplicates)
+                                    val uniqueOperatingHours = station.operatingHours
+                                        .distinctBy { "${it.dayOfWeek}-${it.startTime}-${it.endTime}" }
+
+                                    uniqueOperatingHours.forEach { hour ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = hour.dayOfWeek,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            if (hour.isOpen) {
+                                                Text(
+                                                    text = "${hour.startTime} - ${hour.endTime}",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = "Closed",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
                         Card(
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -126,31 +182,31 @@ fun ReservationFlowScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                
+
                                 Spacer(modifier = Modifier.height(16.dp))
-                                
+
                                 // Time selection options
                                 Text("Select time slot:")
                                 Spacer(modifier = Modifier.height(8.dp))
-                                
+
                                 Button(
                                     onClick = { viewModel.createBookingNow(stationId, 0) },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text("Book Now")
                                 }
-                                
+
                                 Spacer(modifier = Modifier.height(8.dp))
-                                
+
                                 OutlinedButton(
                                     onClick = { viewModel.createBookingNow(stationId, 30) },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text("Book in 30 minutes")
                                 }
-                                
+
                                 Spacer(modifier = Modifier.height(8.dp))
-                                
+
                                 OutlinedButton(
                                     onClick = { viewModel.createBookingNow(stationId, 60) },
                                     modifier = Modifier.fillMaxWidth()

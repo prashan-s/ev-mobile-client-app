@@ -339,14 +339,16 @@ private fun ClarityUpcomingReservationItem(
                 )
                 
                 ClarityStatusChip(
-                    text = when (reservation.status) {
+                    text = when (reservation.status.lowercase()) {
                         "confirmed" -> "Confirmed"
                         "in_progress" -> "Active"
+                        "pending" -> "Pending"
                         else -> "Pending"
                     },
-                    status = when (reservation.status) {
+                    status = when (reservation.status.lowercase()) {
                         "confirmed" -> ClarityStatus.Success
                         "in_progress" -> ClarityStatus.Warning
+                        "pending" -> ClarityStatus.Neutral
                         else -> ClarityStatus.Neutral
                     }
                 )
@@ -422,7 +424,7 @@ private fun ClarityPastReservationItem(
                 modifier = Modifier
                     .size(12.dp)
                     .background(
-                        color = when (reservation.status) {
+                        color = when (reservation.status.lowercase()) {
                             "completed" -> ClaritySuccessGreen
                             "cancelled" -> ClarityErrorRed
                             else -> ClarityMediumGray
@@ -453,7 +455,7 @@ private fun ClarityPastReservationItem(
             }
             
             Text(
-                text = when (reservation.status) {
+                text = when (reservation.status.lowercase()) {
                     "completed" -> "Completed"
                     "cancelled" -> "Cancelled"
                     else -> "Ended"

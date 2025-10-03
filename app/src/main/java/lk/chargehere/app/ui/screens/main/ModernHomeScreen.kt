@@ -63,8 +63,10 @@ fun ModernHomeScreen(
     onNavigateToReservationDetail: (String) -> Unit,
     viewModel: AppHomeViewModel = hiltViewModel()
 ) {
+    android.util.Log.d("ModernHomeScreen", "ModernHomeScreen composing - ViewModel: ${viewModel.hashCode()}")
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    android.util.Log.d("ModernHomeScreen", "UI State - Loading: ${uiState.isLoading}, Stations: ${uiState.nearbyStations.size}, Error: ${uiState.error}")
     
     // State for selected station and bubble position
     var selectedStation by remember { mutableStateOf<Station?>(null) }
@@ -88,10 +90,11 @@ fun ModernHomeScreen(
         position = CameraPosition.fromLatLngZoom(defaultLocation, 12f)
     }
 
-    // Load all stations and upcoming reservations
+    // Load all stations and upcoming reservations on screen appearance
+    // Note: ViewModel init already calls these, but we call again to ensure fresh data
     LaunchedEffect(Unit) {
-        viewModel.loadAllStations() // Changed to load all stations from /api/v1/charging-stations
-        viewModel.loadUpcomingReservations()
+        android.util.Log.d("ModernHomeScreen", "Screen launched - refreshing data")
+        viewModel.refreshData()
     }
 
     // === CLARITY DESIGN SYSTEM IMPLEMENTATION ===
@@ -297,24 +300,13 @@ private fun ClarityFloatingCard(
             modifier = Modifier.padding(ClaritySpacing.md)
         ) {
             if (upcomingReservation != null) {
-                // Upcoming reservation section
+                // Upcoming reservation section - takes priority, hide nearest station
                 ClarityReservationSection(
                     reservation = upcomingReservation,
                     onClick = { onReservationClick(upcomingReservation) }
                 )
-                
-                if (nearestStation != null) {
-                    Spacer(modifier = Modifier.height(ClaritySpacing.md))
-                    HorizontalDivider(
-                        color = ClarityLightGray,
-                        thickness = 1.dp
-                    )
-                    Spacer(modifier = Modifier.height(ClaritySpacing.md))
-                }
-            }
-            
-            if (nearestStation != null) {
-                // Nearest station section
+            } else if (nearestStation != null) {
+                // Nearest station section - only show when no active reservation
                 ClarityNearestStationSection(
                     station = nearestStation,
                     onClick = { onStationClick(nearestStation) }
@@ -329,10 +321,10 @@ private fun ClarityReservationSection(
     reservation: Reservation,
     onClick: () -> Unit
 ) {
+    var showQRCode by remember { mutableStateOf(false) }
+
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -345,29 +337,85 @@ private fun ClarityReservationSection(
                 color = ClarityMediumGray
             )
             ClarityStatusChip(
-                text = "Active",
+                text = when (reservation.status.lowercase()) {
+                    "confirmed", "pending" -> "Active"
+                    "in_progress" -> "In Progress"
+                    else -> "Active"
+                },
                 status = ClarityStatus.Success
             )
         }
-        
+
         Spacer(modifier = Modifier.height(ClaritySpacing.sm))
-        
+
         Text(
             text = LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(reservation.startTime), 
+                Instant.ofEpochMilli(reservation.startTime),
                 ZoneId.systemDefault()
             ).format(DateTimeFormatter.ofPattern("MMM dd, HH:mm")),
             style = MaterialTheme.typography.headlineSmall,
             color = ClarityDarkGray
         )
-        
+
         Spacer(modifier = Modifier.height(ClaritySpacing.xs))
-        
+
         Text(
-            text = "${reservation.durationMinutes} minutes • Tap to view QR code",
+            text = "${reservation.durationMinutes} minutes at ${reservation.stationName}",
             style = MaterialTheme.typography.bodyMedium,
             color = ClarityMediumGray
         )
+
+        Spacer(modifier = Modifier.height(ClaritySpacing.md))
+
+        // QR Code Section (expandable)
+        if (showQRCode) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = ClaritySpacing.sm),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                QRCodeGenerator(
+                    content = reservation.qrPayload ?: "reservation:${reservation.id}",
+                    modifier = Modifier.size(180.dp)
+                )
+
+                Spacer(modifier = Modifier.height(ClaritySpacing.sm))
+
+                Text(
+                    text = "Show this QR code to the station operator",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ClarityMediumGray,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(ClaritySpacing.sm))
+
+                ClarityTextButton(
+                    text = "Hide QR Code",
+                    onClick = { showQRCode = false },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else {
+            // Show QR and View Details buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(ClaritySpacing.sm)
+            ) {
+                ClaritySecondaryButton(
+                    text = "Show QR",
+                    onClick = { showQRCode = true },
+                    modifier = Modifier.weight(1f)
+                )
+
+                ClarityPrimaryButton(
+                    text = "View Details",
+                    onClick = onClick,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
     }
 }
 
