@@ -94,6 +94,7 @@ fun ChargeHereNavigation(
             route = NavigationGraph.Main.route
         ) {
             composable(Screen.Home.route) {
+                android.util.Log.d("ChargeHereNavigation", "Composing MainAppScreen in Main graph")
                 MainAppScreen(
                     onNavigateToStationDetail = { stationId ->
                         navController.navigate(Screen.StationDetail.createRoute(stationId))

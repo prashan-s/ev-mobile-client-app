@@ -20,9 +20,14 @@ fun MainAppScreen(
     onNavigateToReservationDetail: (String) -> Unit,
     onNavigateToAuth: () -> Unit
 ) {
+    android.util.Log.d("MainAppScreen", "MainAppScreen composing")
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    LaunchedEffect(currentRoute) {
+        android.util.Log.d("MainAppScreen", "Current route: $currentRoute")
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Main content area (full screen for home with maps)
@@ -32,6 +37,7 @@ fun MainAppScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             composable("home") {
+                android.util.Log.d("MainAppScreen", "Composing ModernHomeScreen (home route)")
                 ModernHomeScreen(
                     onNavigateToSearch = {
                         navController.navigate("search")
@@ -51,6 +57,7 @@ fun MainAppScreen(
             }
             
             composable("reservations") {
+                android.util.Log.d("MainAppScreen", "Composing ModernReservationsScreen (reservations route)")
                 ModernReservationsScreen(
                     onNavigateToReservationDetail = onNavigateToReservationDetail
                 )
