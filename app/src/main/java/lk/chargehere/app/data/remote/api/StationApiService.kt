@@ -12,7 +12,7 @@ interface StationApiService {
         @Query("latitude") latitude: Double,
         @Query("longitude") longitude: Double,
         @Query("radiusKm") radiusKm: Double
-    ): Response<List<StationDto>>
+    ): Response<NearbyStationsResponse>
     
     // Get All Charging Stations - GET /api/v1/charging-stations
     @GET("/api/v1/charging-stations")

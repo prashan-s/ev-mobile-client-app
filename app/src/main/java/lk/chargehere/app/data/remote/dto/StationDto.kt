@@ -2,73 +2,98 @@ package lk.chargehere.app.data.remote.dto
 
 import com.google.gson.annotations.SerializedName
 
-// Station DTOs - Updated to match new API
+// Station ID DTO for complex object responses
+data class StationIdDto(
+    val timestamp: Long,
+    val creationTime: String
+)
+
+// Station DTOs - Handles both list (simple id) and detail (complex id) responses
 data class StationDto(
-    val id: StationIdDto? = null, // For getById response - contains timestamp and creationTime
-    @SerializedName("id") 
-    val idString: String? = null, // For getAllStations response - simple string ID
-    val name: String,
-    val address: String? = null, // For getById response
-    val location: LocationDto? = null, // For getAllStations response
+    // ID can be either string (list) or complex object (detail)
+    // Gson will try to deserialize 'id' field to whichever type matches
+    val id: Any? = null,  // Can be String or StationIdDto
+
+    val name: String = "",
+    @SerializedName("stationCode")
+    val stationCode: String? = null,
+
+    // Location can be object (list) or fields spread out (detail)
+    val location: LocationDto? = null,
+    val address: String? = null,  // For detail endpoint
+
+    // Type can be "AC"/"DC" (list) or "ac"/"dc" (detail)
+    val type: String? = null,
     @SerializedName("stationType")
-    val stationType: String? = null, // For getById response: "ac" or "dc"
-    val type: String? = null, // For getAllStations response: "AC" or "DC"
+    val stationType: String? = null,
+
     @SerializedName("totalSlots")
     val totalSlots: Int? = null,
     @SerializedName("availableSlots")
     val availableSlots: Int? = null,
     @SerializedName("pricePerHour")
     val pricePerHour: Double? = null,
-    val status: String? = null, // "active" etc
+
+    val status: String? = null,
     @SerializedName("isActive")
     val isActive: Boolean? = null,
-    @SerializedName("createdBy")
-    val createdBy: StationIdDto? = null,
-    @SerializedName("createdAt")
-    val createdAt: String? = null,
-    @SerializedName("updatedAt")
-    val updatedAt: String? = null,
-    @SerializedName("createdDate")
-    val createdDate: String? = null,
-    @SerializedName("stationCode")
-    val stationCode: String? = null,
+
+    // Schedule/operating hours
+    val schedule: List<ScheduleDto>? = null,
+    @SerializedName("operatingHours")
+    val operatingHours: List<OperatingHourDto>? = null,
+
     @SerializedName("operatorId")
     val operatorId: String? = null,
-    val schedule: List<ScheduleDto>? = null
+    @SerializedName("createdBy")
+    val createdBy: StationIdDto? = null,
+
+    @SerializedName("createdAt")
+    val createdAt: String? = null,
+    @SerializedName("createdDate")
+    val createdDate: String? = null,
+    @SerializedName("updatedAt")
+    val updatedAt: String? = null,
+
+    @SerializedName("domainEvents")
+    val domainEvents: List<Map<String, Any>>? = null
 ) {
     // Helper properties for unified access
-    fun getStationId(): String = idString ?: id?.let { "${it.timestamp}" } ?: ""
-    
+    fun getStationId(): String = when (id) {
+        is String -> id
+        is Map<*, *> -> {
+            // Handle complex object as Map
+            (id["timestamp"] as? Double)?.toLong()?.toString() ?: ""
+        }
+        else -> ""
+    }
+
     fun getStationLatitude(): Double = location?.latitude ?: 0.0
-    
+
     fun getStationLongitude(): Double = location?.longitude ?: 0.0
-    
+
     fun getStationAddress(): String = location?.address ?: address ?: ""
-    
+
+    fun getStationCity(): String = location?.city ?: ""
+
     fun getUnifiedStationType(): String = type ?: stationType ?: ""
-    
+
     fun getStationIsActive(): Boolean = when {
         isActive != null -> isActive
-        status != null -> status == "active"
-        else -> true
+        status == "active" -> true
+        else -> false
     }
-    
+
     // Backward compatibility properties
     val maxKw: Double
         get() = if (getUnifiedStationType().uppercase() == "DC") 150.0 else 50.0
-    
+
     val isReservable: Boolean
         get() = getStationIsActive() && (totalSlots ?: 0) > 0
-    
-    val isAvailable: Boolean
-        get() = getStationIsActive()
-}
 
-// Station ID DTO for getById response
-data class StationIdDto(
-    val timestamp: Long,
-    val creationTime: String
-)
+    val isAvailable: Boolean
+        get() = (availableSlots ?: 0) > 0
+}
 
 // Location DTO for nested location data
 data class LocationDto(
@@ -78,23 +103,29 @@ data class LocationDto(
     val longitude: Double
 )
 
-// Schedule DTOs for station availability
+// Schedule DTOs for station availability (list endpoint)
 data class ScheduleDto(
-    val dayOfWeek: String? = null, // For getAllStations response
-    val isOpen: Boolean? = null,
-    val timeSlots: List<TimeSlotDto>? = null,
-    
-    // For getById response - individual slots
-    val slotId: String? = null,
-    val startTime: String? = null,
-    val endTime: String? = null,
-    val isAvailable: Boolean? = null,
-    val bookedBy: String? = null
+    val dayOfWeek: String,
+    val isOpen: Boolean,
+    val timeSlots: List<TimeSlotDto>? = null
 )
 
 data class TimeSlotDto(
     val startTime: String,
     val endTime: String
+)
+
+// Operating hours DTO for station detail endpoint
+data class OperatingHourDto(
+    val dayOfWeek: String,
+    val startTime: String,
+    val endTime: String,
+    val isOpen: Boolean
+)
+
+// Response wrapper for nearby stations
+data class NearbyStationsResponse(
+    val data: List<StationDto>
 )
 
 // Paginated response for getAllStations
