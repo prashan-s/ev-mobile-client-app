@@ -24,29 +24,29 @@ class StationRepository @Inject constructor(
         radiusKm: Double = 10.0
     ): Result<List<Station>> {
         return try {
+            android.util.Log.d("StationRepository", "Fetching nearby stations from API - lat: $latitude, lng: $longitude, radius: $radiusKm")
             val response = stationApiService.getNearbyStations(latitude, longitude, radiusKm)
-            
+
             if (response.isSuccessful) {
-                val stations = response.body()?.map { it.toEntity() } ?: emptyList()
+                val stationDtos = response.body()?.data ?: emptyList()
+                android.util.Log.d("StationRepository", "Received ${stationDtos.size} nearby stations from API")
+
+                val stations = stationDtos.map { it.toEntity() }
                 stationDao.insertStations(stations)
+                android.util.Log.d("StationRepository", "Saved ${stations.size} nearby stations to database")
+
                 Result.Success(stations.map { it.toDomain() })
             } else {
-                // Return cached data if available, otherwise sample data
+                android.util.Log.w("StationRepository", "Nearby stations API call failed with code: ${response.code()}")
+                // Return cached data if available, otherwise empty
                 val cachedStations = stationDao.getAllStations().map { it.toDomain() }
-                if (cachedStations.isNotEmpty()) {
-                    Result.Success(cachedStations)
-                } else {
-                    Result.Success(getSampleStations())
-                }
+                Result.Success(cachedStations)
             }
         } catch (e: Exception) {
-            // Return cached data on network error, otherwise sample data
+            android.util.Log.e("StationRepository", "Network error while fetching nearby stations: ${e.message}", e)
+            // Return cached data on network error
             val cachedStations = stationDao.getAllStations().map { it.toDomain() }
-            if (cachedStations.isNotEmpty()) {
-                Result.Success(cachedStations)
-            } else {
-                Result.Success(getSampleStations())
-            }
+            Result.Success(cachedStations)
         }
     }
     
@@ -57,65 +57,66 @@ class StationRepository @Inject constructor(
         search: String? = null
     ): Result<List<Station>> {
         return try {
+            android.util.Log.d("StationRepository", "Fetching stations from API - page: $page, pageSize: $pageSize")
             val response = stationApiService.getAllStations(page, pageSize, search)
 
             if (response.isSuccessful) {
                 val paginatedResponse = response.body()
                 val stationEntities = paginatedResponse?.data?.map { it.toEntity() } ?: emptyList()
 
+                android.util.Log.d("StationRepository", "Received ${stationEntities.size} stations from API")
+
                 // Save to database for offline access
                 if (stationEntities.isNotEmpty()) {
                     stationDao.insertStations(stationEntities)
+                    android.util.Log.d("StationRepository", "Saved ${stationEntities.size} stations to database")
                 }
 
                 val stations = stationEntities.map { it.toDomain() }
                 Result.Success(stations)
             } else {
-                // Fallback to cached data or sample data
+                // Fallback to cached data
                 val cachedStations = stationDao.getAllStations().map { it.toDomain() }
-                if (cachedStations.isNotEmpty()) {
-                    Result.Success(cachedStations)
-                } else {
-                    // Insert and return sample data for testing
-                    val sampleStations = getSampleStations()
-                    val sampleEntities = sampleStations.map { it.toEntity() }
-                    stationDao.insertStations(sampleEntities)
-                    Result.Success(sampleStations)
-                }
+                Result.Success(cachedStations)
             }
         } catch (e: Exception) {
-            // Fallback to cached data or sample data on network error
+            // Fallback to cached data on network error
             val cachedStations = stationDao.getAllStations().map { it.toDomain() }
-            if (cachedStations.isNotEmpty()) {
-                Result.Success(cachedStations)
-            } else {
-                // Insert and return sample data for testing
-                val sampleStations = getSampleStations()
-                val sampleEntities = sampleStations.map { it.toEntity() }
-                stationDao.insertStations(sampleEntities)
-                Result.Success(sampleStations)
-            }
+            Result.Success(cachedStations)
         }
     }
     
     // Get charging station by ID using GetChargingStationById
     suspend fun getChargingStationById(stationId: String): Result<Station> {
         return try {
+            android.util.Log.d("StationRepository", "Fetching station detail from API for ID: $stationId")
+            android.util.Log.d("StationRepository", "API Call: GET /api/v1/charging-stations/$stationId")
+
             val response = stationApiService.getChargingStationById(stationId)
-            
+
             if (response.isSuccessful) {
                 val stationDto = response.body()
                 if (stationDto != null) {
+                    android.util.Log.d("StationRepository", "Successfully loaded station detail from API")
+                    android.util.Log.d("StationRepository", "Station has ${stationDto.operatingHours?.size ?: 0} operating hours")
+
+                    // Save to database (entity doesn't include operating hours)
                     val stationEntity = stationDto.toEntity()
                     stationDao.insertStations(listOf(stationEntity))
-                    Result.Success(stationEntity.toDomain())
+                    android.util.Log.d("StationRepository", "Saved station to database")
+
+                    // Convert DTO directly to domain to preserve operating hours
+                    Result.Success(stationDto.toDomain())
                 } else {
+                    android.util.Log.w("StationRepository", "API returned successful but null station body")
                     Result.Error("Station not found")
                 }
             } else {
+                android.util.Log.e("StationRepository", "Failed to get station: ${response.code()}")
                 Result.Error("Failed to get station: ${response.code()}")
             }
         } catch (e: Exception) {
+            android.util.Log.e("StationRepository", "Network error while fetching station detail: ${e.message}", e)
             Result.Error("Network error: ${e.message}")
         }
     }
@@ -177,50 +178,5 @@ class StationRepository @Inject constructor(
     
     suspend fun getReservableStations(): List<Station> {
         return stationDao.getReservableStations().map { it.toDomain() }
-    }
-    
-    private fun getSampleStations(): List<Station> {
-        return listOf(
-            Station(
-                id = "station_alpha",
-                name = "Central Mall Charging Station",
-                address = "123 Main Street, Downtown",
-                latitude = 6.9271,
-                longitude = 79.8612,
-                maxPower = 150.0,
-                isReservable = true,
-                isAvailable = true
-            ),
-            Station(
-                id = "station_beta", 
-                name = "Office Complex Charger",
-                address = "456 Business Ave, Business District",
-                latitude = 6.9171,
-                longitude = 79.8712,
-                maxPower = 100.0,
-                isReservable = true,
-                isAvailable = false
-            ),
-            Station(
-                id = "station_gamma",
-                name = "Airport Parking Charger", 
-                address = "Airport Road, Terminal 2",
-                latitude = 6.9371,
-                longitude = 79.8512,
-                maxPower = 75.0,
-                isReservable = true,
-                isAvailable = true
-            ),
-            Station(
-                id = "station_delta",
-                name = "Shopping Center Fast Charge",
-                address = "789 Commerce St, Mall District", 
-                latitude = 6.9071,
-                longitude = 79.8412,
-                maxPower = 200.0,
-                isReservable = false,
-                isAvailable = true
-            )
-        )
     }
 }

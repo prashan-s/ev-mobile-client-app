@@ -56,9 +56,28 @@ fun StationDto.toEntity(): StationEntity {
         latitude = getStationLatitude(),
         longitude = getStationLongitude(),
         maxKw = maxKw,
+        chargerType = getUnifiedStationType().uppercase(),
         isReservable = isReservable,
         isAvailable = isAvailable,
         distanceMeters = null
+    )
+}
+
+fun StationDto.toDomain(): Station {
+    return Station(
+        id = getStationId(),
+        name = name,
+        address = getStationAddress(),
+        latitude = getStationLatitude(),
+        longitude = getStationLongitude(),
+        maxPower = maxKw,
+        chargerType = getUnifiedStationType().uppercase(),
+        isReservable = isReservable,
+        isAvailable = isAvailable,
+        distanceMeters = null,
+        operatingHours = operatingHours?.map { it.toDomain() },
+        createdAt = System.currentTimeMillis(),
+        updatedAt = System.currentTimeMillis()
     )
 }
 
@@ -70,9 +89,11 @@ fun StationEntity.toDomain(): Station {
         latitude = latitude,
         longitude = longitude,
         maxPower = maxKw,
+        chargerType = chargerType,
         isReservable = isReservable,
         isAvailable = isAvailable,
         distanceMeters = distanceMeters,
+        operatingHours = null, // Operating hours not stored in local DB
         createdAt = createdAt,
         updatedAt = updatedAt
     )
@@ -86,6 +107,7 @@ fun Station.toEntity(): StationEntity {
         latitude = latitude,
         longitude = longitude,
         maxKw = maxPower,
+        chargerType = chargerType,
         isReservable = isReservable,
         isAvailable = isAvailable,
         distanceMeters = distanceMeters,
@@ -112,29 +134,29 @@ fun ReservationDto.toEntity(): ReservationEntity {
 // BookingDetailDto Mappers - For detailed booking responses
 fun BookingDetailDto.toEntity(): ReservationEntity {
     return ReservationEntity(
-        reservationId = id ?: "",
-        stationId = chargingStationId ?: "",
+        reservationId = getIdString(),
+        stationId = getStationIdString(),
         userId = evOwnerNIC ?: "",
         status = status ?: "PENDING",
         startTimestamp = parseISOToTimestamp(reservationDateTime ?: ""),
         durationMinutes = 60, // Default duration
-        qrPayload = bookingNumber, // Use booking number as QR payload
+        qrPayload = qrCode ?: bookingNumber, // Use QR code if available, otherwise booking number
         stationName = null, // Will be populated from station data if needed
-        createdAt = timestamp ?: System.currentTimeMillis()
+        createdAt = getTimestamp()
     )
 }
 
 fun BookingDetailDto.toDomain(): Reservation {
     return Reservation(
-        id = id ?: "",
-        stationId = chargingStationId ?: "",
+        id = getIdString(),
+        stationId = getStationIdString(),
         userId = evOwnerNIC ?: "",
         status = status ?: "PENDING",
         startTime = parseISOToTimestamp(reservationDateTime ?: ""),
         durationMinutes = 60,
-        qrPayload = bookingNumber,
+        qrPayload = qrCode ?: bookingNumber ?: "",
         stationName = "", // Will be populated separately if needed
-        createdAt = timestamp ?: System.currentTimeMillis(),
+        createdAt = getTimestamp(),
         updatedAt = System.currentTimeMillis()
     )
 }
@@ -222,5 +244,15 @@ fun OperatorSession.toEntity(): OperatorSessionEntity {
         closeTimestamp = closeTimestamp,
         createdAt = createdAt,
         updatedAt = updatedAt
+    )
+}
+
+// Operating Hours Mappers
+fun OperatingHourDto.toDomain(): OperatingHour {
+    return OperatingHour(
+        dayOfWeek = dayOfWeek,
+        startTime = startTime,
+        endTime = endTime,
+        isOpen = isOpen
     )
 }

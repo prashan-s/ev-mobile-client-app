@@ -28,27 +28,39 @@ class ReservationRepository @Inject constructor(
         reservationDateTime: String
     ): Result<CreateBookingResponse> {
         return try {
+            android.util.Log.d("ReservationRepository", "Creating booking for NIC: $evOwnerNIC, Station: $chargingStationId")
+            android.util.Log.d("ReservationRepository", "Reservation time: $reservationDateTime")
+            android.util.Log.d("ReservationRepository", "API Call: POST /api/v1/bookings")
+
             val request = CreateBookingRequest(evOwnerNIC, chargingStationId, reservationDateTime)
             val response = reservationApiService.createBooking(request)
-            
+
             if (response.isSuccessful) {
                 val bookingResponse = response.body()
                 if (bookingResponse != null) {
+                    android.util.Log.d("ReservationRepository", "Booking created successfully!")
+                    android.util.Log.d("ReservationRepository", "Booking Number: ${bookingResponse.bookingNumber}")
+                    android.util.Log.d("ReservationRepository", "Status: ${bookingResponse.status}")
+                    android.util.Log.d("ReservationRepository", "QR Code: ${bookingResponse.qrCode}")
+
                     // Refresh reservations after creating a new one
                     getBookingsByEVOwner(evOwnerNIC)
                     Result.Success(bookingResponse)
                 } else {
+                    android.util.Log.e("ReservationRepository", "Booking failed: No response data received")
                     Result.Error("Booking failed: No response data received")
                 }
             } else {
                 val errorBody = response.errorBody()?.string()
+                android.util.Log.e("ReservationRepository", "Booking failed: ${response.code()} - $errorBody")
                 Result.Error("Booking failed: ${response.code()} - $errorBody")
             }
         } catch (e: Exception) {
+            android.util.Log.e("ReservationRepository", "Network error while creating booking: ${e.message}", e)
             Result.Error("Network error: ${e.message}")
         }
     }
-    
+
     // Convenience method that converts timestamp to ISO string
     suspend fun placeReservation(
         evOwnerNIC: String,
@@ -58,26 +70,34 @@ class ReservationRepository @Inject constructor(
         val isoDateTime = Instant.ofEpochMilli(startTime)
             .atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-        
+
+        android.util.Log.d("ReservationRepository", "Converting timestamp $startTime to ISO: $isoDateTime")
         return createBooking(evOwnerNIC, stationId, isoDateTime)
     }
     
     // Get booking by ID using GetBookingById
     suspend fun getBookingById(bookingId: String): Result<BookingDetailDto> {
         return try {
+            android.util.Log.d("ReservationRepository", "Fetching booking detail from API for ID: $bookingId")
+            android.util.Log.d("ReservationRepository", "API Call: GET /api/v1/bookings/$bookingId")
+
             val response = reservationApiService.getBookingById(bookingId)
-            
+
             if (response.isSuccessful) {
                 val booking = response.body()
                 if (booking != null) {
+                    android.util.Log.d("ReservationRepository", "Successfully loaded booking detail from API")
                     Result.Success(booking)
                 } else {
+                    android.util.Log.w("ReservationRepository", "API returned successful but null booking body")
                     Result.Error("Booking not found")
                 }
             } else {
+                android.util.Log.e("ReservationRepository", "Failed to get booking: ${response.code()}")
                 Result.Error("Failed to get booking: ${response.code()}")
             }
         } catch (e: Exception) {
+            android.util.Log.e("ReservationRepository", "Network error while fetching booking detail: ${e.message}", e)
             Result.Error("Network error: ${e.message}")
         }
     }
@@ -85,31 +105,38 @@ class ReservationRepository @Inject constructor(
     // Get bookings by EVOwner using GetBookingsByEVOwner
     suspend fun getBookingsByEVOwner(evOwnerNIC: String): Result<List<Reservation>> {
         return try {
+            android.util.Log.d("ReservationRepository", "Fetching bookings from API for NIC: $evOwnerNIC")
+            android.util.Log.d("ReservationRepository", "API Call: GET /api/v1/bookings/evowner/$evOwnerNIC")
+
             val response = reservationApiService.getBookingsByEVOwner(evOwnerNIC)
 
             if (response.isSuccessful) {
-                val reservations = response.body()?.map { it.toEntity() } ?: emptyList()
+                val bookingDetails = response.body() ?: emptyList()
+                android.util.Log.d("ReservationRepository", "Successfully loaded ${bookingDetails.size} bookings from API")
+
+                // Convert BookingDetailDto to ReservationEntity
+                val reservations = bookingDetails.map { it.toEntity() }
+
                 reservations.forEach { reservationDao.insertReservation(it) }
+                android.util.Log.d("ReservationRepository", "Saved ${reservations.size} reservations to database")
+
                 Result.Success(reservations.map { it.toDomain() })
             } else {
-                // Return cached data if available, otherwise sample data for testing
+                android.util.Log.w("ReservationRepository", "API call failed with code: ${response.code()}, falling back to cached data")
+                val errorBody = response.errorBody()?.string()
+                android.util.Log.w("ReservationRepository", "Error body: $errorBody")
+                // Return cached data if available
                 val cachedReservations = reservationDao.getAllReservations().map { it.toDomain() }
-                if (cachedReservations.isNotEmpty()) {
-                    Result.Success(cachedReservations)
-                } else {
-                    // Return sample data for testing
-                    Result.Success(getSampleReservations())
-                }
+                android.util.Log.d("ReservationRepository", "Returning ${cachedReservations.size} cached reservations")
+                Result.Success(cachedReservations)
             }
         } catch (e: Exception) {
-            // Return cached data on network error, otherwise sample data
+            android.util.Log.e("ReservationRepository", "Network error: ${e.message}", e)
+            e.printStackTrace()
+            // Return cached data on network error
             val cachedReservations = reservationDao.getAllReservations().map { it.toDomain() }
-            if (cachedReservations.isNotEmpty()) {
-                Result.Success(cachedReservations)
-            } else {
-                // Return sample data for testing
-                Result.Success(getSampleReservations())
-            }
+            android.util.Log.d("ReservationRepository", "Returning ${cachedReservations.size} cached reservations after network error")
+            Result.Success(cachedReservations)
         }
     }
     
@@ -187,42 +214,5 @@ class ReservationRepository @Inject constructor(
     suspend fun getApprovedReservationsCount(userId: String): Int {
         return reservationDao.getApprovedReservationsCount(userId)
     }
-    
-    private fun getSampleReservations(): List<Reservation> {
-        return listOf(
-            Reservation(
-                id = "res_001",
-                stationId = "station_alpha",
-                userId = "user_001",
-                status = "APPROVED",
-                startTime = System.currentTimeMillis() + (2 * 60 * 60 * 1000), // 2 hours from now
-                durationMinutes = 60,
-                qrPayload = "RES_001_${System.currentTimeMillis()}",
-                stationName = "Central Mall Charging Station",
-                createdAt = System.currentTimeMillis() - (24 * 60 * 60 * 1000)
-            ),
-            Reservation(
-                id = "res_002",
-                stationId = "station_beta", 
-                userId = "user_001",
-                status = "COMPLETED",
-                startTime = System.currentTimeMillis() - (3 * 24 * 60 * 60 * 1000), // 3 days ago
-                durationMinutes = 45,
-                qrPayload = null,
-                stationName = "Office Complex Charger",
-                createdAt = System.currentTimeMillis() - (4 * 24 * 60 * 60 * 1000)
-            ),
-            Reservation(
-                id = "res_003",
-                stationId = "station_gamma",
-                userId = "user_001", 
-                status = "PENDING",
-                startTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000), // Tomorrow
-                durationMinutes = 90,
-                qrPayload = "RES_003_${System.currentTimeMillis()}",
-                stationName = "Airport Parking Charger",
-                createdAt = System.currentTimeMillis()
-            )
-        )
-    }
+
 }
