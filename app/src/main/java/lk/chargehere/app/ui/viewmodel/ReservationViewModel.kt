@@ -18,10 +18,18 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
+data class TimeSlot(
+    val id: String,
+    val displayTime: String,
+    val timestampMillis: Long,
+    val offsetMinutes: Int
+)
+
 data class ReservationCreationUiState(
     val isLoading: Boolean = false,
     val station: Station? = null,
-    val selectedDateTime: Long? = null,
+    val availableTimeSlots: List<TimeSlot> = emptyList(),
+    val selectedTimeSlot: TimeSlot? = null,
     val bookingResponse: CreateBookingResponse? = null,
     val error: String? = null,
     val isBookingSuccessful: Boolean = false
@@ -38,17 +46,21 @@ class ReservationViewModel @Inject constructor(
     val uiState: StateFlow<ReservationCreationUiState> = _uiState.asStateFlow()
 
     /**
-     * Load station details for booking
+     * Load station details for booking and generate time slots
      */
     fun loadStation(stationId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+
             when (val result = stationRepository.getChargingStationById(stationId)) {
                 is Result.Success -> {
+                    val timeSlots = generateTimeSlots()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        station = result.data
+                        station = result.data,
+                        availableTimeSlots = timeSlots,
+                        // Auto-select first time slot
+                        selectedTimeSlot = timeSlots.firstOrNull()
                     )
                 }
                 is Result.Error -> {
@@ -65,10 +77,67 @@ class ReservationViewModel @Inject constructor(
     }
 
     /**
-     * Set the selected date/time for reservation
+     * Generate available time slots (Now, 30 min, 1 hour, 2 hours, 4 hours, 6 hours)
      */
-    fun setSelectedDateTime(timestampMillis: Long) {
-        _uiState.value = _uiState.value.copy(selectedDateTime = timestampMillis)
+    private fun generateTimeSlots(): List<TimeSlot> {
+        val now = System.currentTimeMillis()
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+        return listOf(
+            TimeSlot(
+                id = "now",
+                displayTime = "Now",
+                timestampMillis = now,
+                offsetMinutes = 0
+            ),
+            TimeSlot(
+                id = "30min",
+                displayTime = Instant.ofEpochMilli(now + 30 * 60 * 1000L)
+                    .atZone(ZoneId.systemDefault())
+                    .format(timeFormatter),
+                timestampMillis = now + 30 * 60 * 1000L,
+                offsetMinutes = 30
+            ),
+            TimeSlot(
+                id = "1hour",
+                displayTime = Instant.ofEpochMilli(now + 60 * 60 * 1000L)
+                    .atZone(ZoneId.systemDefault())
+                    .format(timeFormatter),
+                timestampMillis = now + 60 * 60 * 1000L,
+                offsetMinutes = 60
+            ),
+            TimeSlot(
+                id = "2hours",
+                displayTime = Instant.ofEpochMilli(now + 2 * 60 * 60 * 1000L)
+                    .atZone(ZoneId.systemDefault())
+                    .format(timeFormatter),
+                timestampMillis = now + 2 * 60 * 60 * 1000L,
+                offsetMinutes = 120
+            ),
+            TimeSlot(
+                id = "4hours",
+                displayTime = Instant.ofEpochMilli(now + 4 * 60 * 60 * 1000L)
+                    .atZone(ZoneId.systemDefault())
+                    .format(timeFormatter),
+                timestampMillis = now + 4 * 60 * 60 * 1000L,
+                offsetMinutes = 240
+            ),
+            TimeSlot(
+                id = "6hours",
+                displayTime = Instant.ofEpochMilli(now + 6 * 60 * 60 * 1000L)
+                    .atZone(ZoneId.systemDefault())
+                    .format(timeFormatter),
+                timestampMillis = now + 6 * 60 * 60 * 1000L,
+                offsetMinutes = 360
+            )
+        )
+    }
+
+    /**
+     * Select a time slot
+     */
+    fun selectTimeSlot(timeSlot: TimeSlot) {
+        _uiState.value = _uiState.value.copy(selectedTimeSlot = timeSlot)
     }
 
     /**
@@ -116,11 +185,17 @@ class ReservationViewModel @Inject constructor(
     }
 
     /**
-     * Convenience method that creates booking with current time + offset
+     * Create booking with selected time slot
      */
-    fun createBookingNow(stationId: String, offsetMinutes: Int = 0) {
-        val targetTime = System.currentTimeMillis() + (offsetMinutes * 60 * 1000L)
-        createBooking(stationId, targetTime)
+    fun createBookingWithSelectedSlot(stationId: String) {
+        val selectedSlot = _uiState.value.selectedTimeSlot
+        if (selectedSlot != null) {
+            createBooking(stationId, selectedSlot.timestampMillis)
+        } else {
+            _uiState.value = _uiState.value.copy(
+                error = "Please select a time slot"
+            )
+        }
     }
 
     fun clearError() {

@@ -1,16 +1,28 @@
 package lk.chargehere.app.ui.screens.main
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import lk.chargehere.app.ui.components.*
+import lk.chargehere.app.ui.theme.*
 import lk.chargehere.app.ui.viewmodel.ReservationViewModel
+import lk.chargehere.app.ui.viewmodel.TimeSlot
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,201 +43,330 @@ fun ReservationFlowScreen(
     LaunchedEffect(uiState.isBookingSuccessful) {
         if (uiState.isBookingSuccessful && uiState.bookingResponse != null) {
             // Navigate to confirmation with booking ID
-            val bookingId = uiState.bookingResponse!!.id?.timestamp?.toString()
+            val bookingId = uiState.bookingResponse!!.id
                 ?: uiState.bookingResponse!!.bookingNumber
                 ?: "unknown"
             onNavigateToConfirmation(bookingId)
         }
     }
     
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Make Reservation") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+    // === CLARITY DESIGN SYSTEM IMPLEMENTATION ===
+    Box(modifier = Modifier.fillMaxSize()) {
+        ClarityBackground {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Clean Header Bar
+                ClarityDetailHeader(
+                    title = "Create Booking",
+                    onNavigateBack = onNavigateBack
+                )
+
+                when {
+                    uiState.isLoading -> {
+                        ModernLoadingState()
+                    }
+                    uiState.error != null -> {
+                        ModernErrorState(
+                            error = uiState.error!!,
+                            onDismiss = { viewModel.clearError() }
+                        )
+                    }
+                    uiState.station != null -> {
+                        ModernBookingContent(
+                            station = uiState.station!!,
+                            availableTimeSlots = uiState.availableTimeSlots,
+                            selectedTimeSlot = uiState.selectedTimeSlot,
+                            onTimeSlotSelected = { viewModel.selectTimeSlot(it) },
+                            onConfirmBooking = { viewModel.createBookingWithSelectedSlot(stationId) }
+                        )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClarityDetailHeader(
+    title: String,
+    onNavigateBack: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(ClarityPureWhite)
+            .padding(horizontal = ClaritySpacing.md, vertical = ClaritySpacing.md)
+            .statusBarsPadding(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onNavigateBack) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                tint = ClarityDarkGray
             )
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when {
-                uiState.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            color = ClarityDarkGray,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun ModernLoadingState() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(
+                color = ClarityAccentBlue,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(ClaritySpacing.md))
+            Text(
+                text = "Loading station details...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = ClarityMediumGray
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModernErrorState(
+    error: String,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(ClaritySpacing.lg),
+        contentAlignment = Alignment.Center
+    ) {
+        ClarityCard {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    tint = ClarityErrorRed,
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(modifier = Modifier.height(ClaritySpacing.md))
+                Text(
+                    text = "Error",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = ClarityDarkGray,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(ClaritySpacing.sm))
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = ClarityMediumGray,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(ClaritySpacing.lg))
+                ClarityPrimaryButton(
+                    text = "OK",
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModernBookingContent(
+    station: lk.chargehere.app.domain.model.Station,
+    availableTimeSlots: List<TimeSlot>,
+    selectedTimeSlot: TimeSlot?,
+    onTimeSlotSelected: (TimeSlot) -> Unit,
+    onConfirmBooking: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = ClaritySpacing.md)
+    ) {
+        // Station Info Card
+        ClaritySectionHeader(text = "Station Details")
+        ClarityCard {
+            Column {
+                Text(
+                    text = station.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = ClarityDarkGray,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(ClaritySpacing.sm))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = ClarityMediumGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(ClaritySpacing.xs))
+                    Text(
+                        text = station.address ?: "Address not available",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ClarityMediumGray
                     )
                 }
-                uiState.error != null -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = uiState.error ?: "Unknown error",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.clearError() }) {
-                            Text("OK")
-                        }
-                    }
+
+                Spacer(modifier = Modifier.height(ClaritySpacing.xs))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.ElectricBolt,
+                        contentDescription = null,
+                        tint = ClarityAccentBlue,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(ClaritySpacing.xs))
+                    Text(
+                        text = "${station.maxPower} kW • ${station.chargerType}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ClarityDarkGray,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
-                uiState.station != null -> {
-                    val station = uiState.station!!
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+            }
+        }
+
+        Spacer(modifier = Modifier.height(ClaritySpacing.lg))
+
+        // Time Slot Selection
+        ClaritySectionHeader(text = "Select Time Slot")
+
+        Text(
+            text = "Choose when you'd like to start charging",
+            style = MaterialTheme.typography.bodyMedium,
+            color = ClarityMediumGray,
+            modifier = Modifier.padding(bottom = ClaritySpacing.sm)
+        )
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(ClaritySpacing.sm),
+            contentPadding = PaddingValues(vertical = ClaritySpacing.xs)
+        ) {
+            items(availableTimeSlots) { timeSlot ->
+                ModernTimeSlotCard(
+                    timeSlot = timeSlot,
+                    isSelected = selectedTimeSlot?.id == timeSlot.id,
+                    onClick = { onTimeSlotSelected(timeSlot) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(ClaritySpacing.lg))
+
+        // Selected Time Summary
+        if (selectedTimeSlot != null) {
+            ClarityCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = ClarityAccentBlue,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(ClaritySpacing.sm))
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Book Charging Session",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
+                            text = "Selected Time",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = ClarityMediumGray
                         )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-                                Text(
-                                    text = "Station: ${station.name}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                station.address?.let {
-                                    Text("Address: $it")
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-                                Text("Power: ${station.maxPower} kW")
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Operating Hours Card
-                        if (station.operatingHours != null && station.operatingHours.isNotEmpty()) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp)
-                                ) {
-                                    Text(
-                                        text = "Operating Hours",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    // Group operating hours by unique days (remove duplicates)
-                                    val uniqueOperatingHours = station.operatingHours
-                                        .distinctBy { "${it.dayOfWeek}-${it.startTime}-${it.endTime}" }
-
-                                    uniqueOperatingHours.forEach { hour ->
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 4.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = hour.dayOfWeek,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                modifier = Modifier.weight(1f)
-                                            )
-                                            if (hour.isOpen) {
-                                                Text(
-                                                    text = "${hour.startTime} - ${hour.endTime}",
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                            } else {
-                                                Text(
-                                                    text = "Closed",
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.error
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-
-                        Card(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-                                Text(
-                                    text = "Reservation Details",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Time selection options
-                                Text("Select time slot:")
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Button(
-                                    onClick = { viewModel.createBookingNow(stationId, 0) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("Book Now")
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                OutlinedButton(
-                                    onClick = { viewModel.createBookingNow(stationId, 30) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("Book in 30 minutes")
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                OutlinedButton(
-                                    onClick = { viewModel.createBookingNow(stationId, 60) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("Book in 1 hour")
-                                }
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
-                        
-                        OutlinedButton(
-                            onClick = onNavigateBack,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Cancel")
-                        }
+                        Text(
+                            text = if (selectedTimeSlot.id == "now") "Now" else selectedTimeSlot.displayTime,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = ClarityDarkGray,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = ClaritySuccessGreen,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
+            }
+            Spacer(modifier = Modifier.height(ClaritySpacing.lg))
+        }
+
+        // Confirm Button
+        ClarityPrimaryButton(
+            text = "Confirm Booking",
+            onClick = onConfirmBooking,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = selectedTimeSlot != null
+        )
+
+        Spacer(modifier = Modifier.height(ClaritySpacing.xxxl))
+    }
+}
+
+@Composable
+private fun ModernTimeSlotCard(
+    timeSlot: TimeSlot,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (isSelected) ClarityAccentBlue else ClarityPureWhite
+    val textColor = if (isSelected) ClarityPureWhite else ClarityDarkGray
+    val borderColor = if (isSelected) ClarityAccentBlue else ClarityLightGray
+
+    Box(
+        modifier = Modifier
+            .width(100.dp)
+            .clip(RoundedCornerShape(ClaritySpacing.md))
+            .background(backgroundColor)
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = RoundedCornerShape(ClaritySpacing.md)
+            )
+            .clickable(onClick = onClick)
+            .padding(ClaritySpacing.md),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = if (timeSlot.id == "now") Icons.Default.FlashOn else Icons.Default.Schedule,
+                contentDescription = null,
+                tint = textColor,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(ClaritySpacing.xs))
+            Text(
+                text = timeSlot.displayTime,
+                style = MaterialTheme.typography.titleMedium,
+                color = textColor,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+            )
+            if (timeSlot.id != "now") {
+                Text(
+                    text = "in ${timeSlot.offsetMinutes}m",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = textColor.copy(alpha = 0.7f)
+                )
             }
         }
     }

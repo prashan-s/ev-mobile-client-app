@@ -46,6 +46,14 @@ fun ModernReservationsScreen(
         viewModel.loadReservations()
     }
 
+    // Monitor cancellation success and close dialog automatically
+    LaunchedEffect(uiState.cancellationSuccess) {
+        if (uiState.cancellationSuccess && showCancelDialog) {
+            showCancelDialog = false
+            reservationToCancel = null
+        }
+    }
+
     // === CLARITY DESIGN SYSTEM IMPLEMENTATION ===
     Box(modifier = Modifier.fillMaxSize()) {
         ClarityBackground {
@@ -109,14 +117,13 @@ fun ModernReservationsScreen(
         // Render dialog at screen root level for proper overlay
         if (showCancelDialog && reservationToCancel != null) {
             ClarityCancelReservationDialog(
+                isLoading = uiState.isCancellationInProgress,
                 onDismiss = {
                     showCancelDialog = false
                     reservationToCancel = null
                 },
                 onConfirm = {
                     reservationToCancel?.let { viewModel.cancelReservation(it) }
-                    showCancelDialog = false
-                    reservationToCancel = null
                 }
             )
         }
@@ -478,6 +485,7 @@ private fun ClarityPastReservationItem(
 
 @Composable
 private fun ClarityCancelReservationDialog(
+    isLoading: Boolean = false,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -513,13 +521,15 @@ private fun ClarityCancelReservationDialog(
                 ClarityTextButton(
                     text = "Keep",
                     onClick = onDismiss,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    enabled = !isLoading
                 )
                 
                 ClarityPrimaryButton(
-                    text = "Cancel",
+                    text = if (isLoading) "Cancelling..." else "Cancel",
                     onClick = onConfirm,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    enabled = !isLoading
                 )
             }
         }

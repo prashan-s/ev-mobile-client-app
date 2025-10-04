@@ -19,7 +19,7 @@ object NetworkModule {
     
     // HTTP URL for testing purposes - clear text traffic enabled
     // TODO: Change to HTTPS for production
-    private const val BASE_URL = "http://192.168.1.3:5001"
+    private const val BASE_URL = "http://192.168.1.2:5001"
     
     @Provides
     @Singleton

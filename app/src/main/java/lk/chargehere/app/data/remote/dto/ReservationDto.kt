@@ -25,15 +25,10 @@ data class ReservationDto(
     val station: StationDto? = null
 )
 
-// ID DTO for complex object responses
-data class BookingIdDto(
-    val timestamp: Long,
-    val creationTime: String
-)
-
 // Detailed booking response from GetBookingById
 data class BookingDetailDto(
-    val id: BookingIdDto? = null,
+    @SerializedName("id")
+    val id: String? = null,
     @SerializedName("bookingNumber")
     val bookingNumber: String? = null,
     @SerializedName("effectiveBookingNumber")
@@ -41,7 +36,7 @@ data class BookingDetailDto(
     @SerializedName("evOwnerNIC")
     val evOwnerNIC: String? = null,
     @SerializedName("chargingStationId")
-    val chargingStationId: BookingIdDto? = null,
+    val chargingStationId: String? = null,
     @SerializedName("bookingDate")
     val bookingDate: String? = null,
     @SerializedName("reservationDateTime")
@@ -69,20 +64,20 @@ data class BookingDetailDto(
     @SerializedName("cancelledDate")
     val cancelledDate: String? = null,
     @SerializedName("cancelledBy")
-    val cancelledBy: BookingIdDto? = null,
+    val cancelledBy: String? = null,
     @SerializedName("cancellationReason")
     val cancellationReason: String? = null,
     @SerializedName("domainEvents")
     val domainEvents: List<Map<String, Any>>? = null
 ) {
     // Helper to get ID as string
-    fun getIdString(): String = id?.timestamp?.toString() ?: ""
+    fun getIdString(): String = id ?: ""
 
     // Helper to get station ID as string
-    fun getStationIdString(): String = chargingStationId?.timestamp?.toString() ?: ""
+    fun getStationIdString(): String = chargingStationId ?: ""
 
     // Helper to get timestamp for created date
-    fun getTimestamp(): Long = id?.timestamp ?: System.currentTimeMillis()
+    fun getTimestamp(): Long = System.currentTimeMillis()
 
     // Helper to resolve the effective booking number (fallback to bookingNumber if effectiveBookingNumber is null)
     fun resolveBookingNumber(): String = effectiveBookingNumber ?: bookingNumber ?: ""
@@ -113,7 +108,8 @@ data class CreateBookingRequest(
 // Response from POST /api/v1/bookings
 // Returns the created booking detail (same structure as BookingDetailDto)
 data class CreateBookingResponse(
-    val id: BookingIdDto? = null,
+    @SerializedName("id")
+    val id: String? = null,
     @SerializedName("bookingNumber")
     val bookingNumber: String? = null,
     @SerializedName("effectiveBookingNumber")
@@ -121,7 +117,7 @@ data class CreateBookingResponse(
     @SerializedName("evOwnerNIC")
     val evOwnerNIC: String? = null,
     @SerializedName("chargingStationId")
-    val chargingStationId: BookingIdDto? = null,
+    val chargingStationId: String? = null,
     @SerializedName("bookingDate")
     val bookingDate: String? = null,
     @SerializedName("reservationDateTime")

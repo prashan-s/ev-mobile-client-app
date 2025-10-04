@@ -17,7 +17,9 @@ data class ReservationsUiState(
     val isLoading: Boolean = false,
     val upcomingReservations: List<Reservation> = emptyList(),
     val pastReservations: List<Reservation> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
+    val isCancellationInProgress: Boolean = false,
+    val cancellationSuccess: Boolean = false
 )
 
 @HiltViewModel
@@ -102,18 +104,32 @@ class ReservationsViewModel @Inject constructor(
 
     fun cancelReservation(reservationId: String, reason: String? = null) {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isCancellationInProgress = true,
+                error = null,
+                cancellationSuccess = false
+            )
+            
             when (val result = reservationRepository.cancelReservation(reservationId, reason)) {
                 is Result.Success -> {
+                    android.util.Log.d("ReservationsViewModel", "Successfully cancelled reservation: $reservationId")
+                    _uiState.value = _uiState.value.copy(
+                        cancellationSuccess = true,
+                        isCancellationInProgress = false
+                    )
                     // Reload reservations to reflect the change
                     loadReservations()
                 }
                 is Result.Error -> {
+                    android.util.Log.e("ReservationsViewModel", "Failed to cancel reservation: ${result.message}")
                     _uiState.value = _uiState.value.copy(
-                        error = result.message
+                        error = result.message,
+                        isCancellationInProgress = false,
+                        cancellationSuccess = false
                     )
                 }
                 is Result.Loading -> {
-                    // Could show loading state for specific reservation
+                    _uiState.value = _uiState.value.copy(isCancellationInProgress = true)
                 }
             }
         }

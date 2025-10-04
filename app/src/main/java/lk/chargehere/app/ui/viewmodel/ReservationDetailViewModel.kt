@@ -17,7 +17,9 @@ data class ReservationDetailUiState(
     val isLoading: Boolean = false,
     val reservation: Reservation? = null,
     val error: String? = null,
-    val isCancelled: Boolean = false
+    val isCancelling: Boolean = false,
+    val cancellationSuccess: Boolean = false,
+    val cancellationError: String? = null
 )
 
 @HiltViewModel
@@ -61,24 +63,41 @@ class ReservationDetailViewModel @Inject constructor(
         }
     }
 
-    fun cancelReservation(reservationId: String, reason: String? = null) {
+    fun cancelReservation(reservationId: String, reason: String = "User Cancelled") {
         viewModelScope.launch {
+            android.util.Log.d("ReservationDetailViewModel", "Cancelling reservation: $reservationId")
+            _uiState.value = _uiState.value.copy(
+                isCancelling = true,
+                cancellationError = null
+            )
+
+
             when (val result = reservationRepository.cancelReservation(reservationId, reason)) {
                 is Result.Success -> {
+                    android.util.Log.d("ReservationDetailViewModel", "Successfully cancelled reservation")
                     _uiState.value = _uiState.value.copy(
-                        isCancelled = true
+                        isCancelling = false,
+                        cancellationSuccess = true,
+                        // Update the reservation status to cancelled
+                        reservation = _uiState.value.reservation?.copy(status = "cancelled")
                     )
                 }
                 is Result.Error -> {
+                    android.util.Log.e("ReservationDetailViewModel", "Failed to cancel: ${result.message}")
                     _uiState.value = _uiState.value.copy(
-                        error = result.message
+                        isCancelling = false,
+                        cancellationError = result.message
                     )
                 }
                 is Result.Loading -> {
-                    // Could show loading state for cancellation
+                    _uiState.value = _uiState.value.copy(isCancelling = true)
                 }
             }
         }
+    }
+
+    fun clearCancellationSuccess() {
+        _uiState.value = _uiState.value.copy(cancellationSuccess = false)
     }
 
     fun clearError() {

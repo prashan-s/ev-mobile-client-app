@@ -18,8 +18,8 @@ interface ReservationApiService {
     @GET("/api/v1/bookings/evowner/{evOwnerNIC}")
     suspend fun getBookingsByEVOwner(@Path("evOwnerNIC") evOwnerNIC: String): Response<List<BookingDetailDto>>
     
-    // Cancel Booking - DELETE /api/v1/bookings/{id}
-    @HTTP(method = "DELETE", path = "/api/v1/bookings/{id}", hasBody = true)
+    // Cancel Booking - POST /api/v1/bookings/{id}/cancel
+    @POST("/api/v1/bookings/{id}/cancel")
     suspend fun cancelBooking(
         @Path("id") bookingId: String,
         @Body request: CancelBookingRequest
