@@ -29,34 +29,57 @@ class ReservationsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ReservationsUiState())
     val uiState: StateFlow<ReservationsUiState> = _uiState.asStateFlow()
 
+    init {
+        android.util.Log.d("ReservationsViewModel", "ReservationsViewModel initialized - loading reservations")
+        loadReservations()
+    }
+
     fun loadReservations() {
         viewModelScope.launch {
+            android.util.Log.d("ReservationsViewModel", "Loading reservations from API")
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+
             val nic = authManager.getCurrentUserNic()
             if (nic == null) {
+                android.util.Log.w("ReservationsViewModel", "Cannot load reservations - user NIC is null")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = "User not authenticated"
                 )
                 return@launch
             }
-            
+
+            android.util.Log.d("ReservationsViewModel", "Fetching reservations for NIC: $nic")
+            android.util.Log.d("ReservationsViewModel", "API Call: GET /api/v1/bookings/evowner/$nic")
+
             when (val result = reservationRepository.getMyReservations(nic)) {
                 is Result.Success -> {
                     val allReservations = result.data
+                    android.util.Log.d("ReservationsViewModel", "Successfully loaded ${allReservations.size} reservations from API")
+
+                    // Log reservation details for debugging
+                    allReservations.forEach { reservation ->
+                        android.util.Log.d("ReservationsViewModel", "Reservation: id=${reservation.id}, status='${reservation.status}', startTime=${reservation.startTime}, now=${System.currentTimeMillis()}")
+                    }
+
                     val now = System.currentTimeMillis()
-                    
+
                     val upcoming = allReservations.filter { reservation ->
-                        reservation.status in listOf("PENDING", "APPROVED") && 
-                        reservation.startTime > now
+                        val statusUpper = reservation.status.uppercase()
+                        val isFutureReservation = reservation.startTime > now
+                        val isActiveStatus = statusUpper in listOf("PENDING", "APPROVED", "CONFIRMED")
+                        android.util.Log.d("ReservationsViewModel", "Filter upcoming: id=${reservation.id}, status='${reservation.status}' (upper='$statusUpper'), isFuture=$isFutureReservation, isActive=$isActiveStatus")
+                        isActiveStatus && isFutureReservation
                     }.sortedBy { it.startTime }
-                    
+
                     val past = allReservations.filter { reservation ->
-                        reservation.status in listOf("COMPLETED", "CANCELLED") ||
+                        val statusUpper = reservation.status.uppercase()
+                        statusUpper in listOf("COMPLETED", "CANCELLED") ||
                         (reservation.startTime <= now)
                     }.sortedByDescending { it.startTime }
-                    
+
+                    android.util.Log.d("ReservationsViewModel", "Categorized: ${upcoming.size} upcoming, ${past.size} past")
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         upcomingReservations = upcoming,
@@ -64,6 +87,7 @@ class ReservationsViewModel @Inject constructor(
                     )
                 }
                 is Result.Error -> {
+                    android.util.Log.e("ReservationsViewModel", "Failed to load reservations: ${result.message}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = result.message

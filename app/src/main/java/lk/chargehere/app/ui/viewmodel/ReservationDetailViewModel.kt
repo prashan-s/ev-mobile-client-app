@@ -30,20 +30,25 @@ class ReservationDetailViewModel @Inject constructor(
 
     fun loadReservationDetail(reservationId: String) {
         viewModelScope.launch {
+            android.util.Log.d("ReservationDetailViewModel", "Loading reservation detail for ID: $reservationId")
+            android.util.Log.d("ReservationDetailViewModel", "API Call: GET /api/v1/bookings/$reservationId")
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+
             // Use the GetBookingById endpoint
             when (val result = reservationRepository.getBookingById(reservationId)) {
                 is Result.Success -> {
+                    android.util.Log.d("ReservationDetailViewModel", "Successfully loaded booking detail from API")
                     // Convert BookingDetailDto to Reservation domain model
                     val bookingDetail = result.data
                     val reservation = bookingDetail.toDomain()
+                    android.util.Log.d("ReservationDetailViewModel", "Reservation: ${reservation.stationName}, status: ${reservation.status}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         reservation = reservation
                     )
                 }
                 is Result.Error -> {
+                    android.util.Log.e("ReservationDetailViewModel", "Failed to load booking detail: ${result.message}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = result.message

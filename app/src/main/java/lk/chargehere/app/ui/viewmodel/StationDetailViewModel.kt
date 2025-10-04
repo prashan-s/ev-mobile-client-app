@@ -31,16 +31,21 @@ class StationDetailViewModel @Inject constructor(
      */
     fun loadStationDetails(stationId: String) {
         viewModelScope.launch {
+            android.util.Log.d("StationDetailViewModel", "Loading station detail for ID: $stationId")
+            android.util.Log.d("StationDetailViewModel", "API Call: GET /api/v1/charging-stations/$stationId")
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+
             when (val result = stationRepository.getChargingStationById(stationId)) {
                 is Result.Success -> {
+                    android.util.Log.d("StationDetailViewModel", "Successfully loaded station detail from API")
+                    android.util.Log.d("StationDetailViewModel", "Station: ${result.data.name}, type: ${result.data.chargerType}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         station = result.data
                     )
                 }
                 is Result.Error -> {
+                    android.util.Log.e("StationDetailViewModel", "Failed to load station detail: ${result.message}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = result.message

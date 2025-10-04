@@ -32,6 +32,12 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    init {
+        android.util.Log.d("HomeViewModel", "HomeViewModel initialized - loading stations")
+        loadAllStations()
+        loadUpcomingReservations()
+    }
+
     fun loadNearbyStations(latitude: Double, longitude: Double, radius: Double = 10.0) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -64,11 +70,15 @@ class HomeViewModel @Inject constructor(
      */
     fun loadAllStations() {
         viewModelScope.launch {
+            android.util.Log.d("HomeViewModel", "Loading all stations")
+
             // Step 1: Load cached stations from database immediately (fast)
             val cachedStations = stationRepository.getCachedStations()
+            android.util.Log.d("HomeViewModel", "Loaded ${cachedStations.size} cached stations from database")
 
             if (cachedStations.isEmpty()) {
                 // Show loading indicator only if no cached data
+                android.util.Log.d("HomeViewModel", "No cached stations - showing loading indicator")
                 _uiState.value = _uiState.value.copy(
                     isLoading = true,
                     nearbyStations = emptyList(),
@@ -76,6 +86,7 @@ class HomeViewModel @Inject constructor(
                 )
             } else {
                 // Show cached data immediately
+                android.util.Log.d("HomeViewModel", "Showing ${cachedStations.size} cached stations")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     nearbyStations = cachedStations,
@@ -84,8 +95,10 @@ class HomeViewModel @Inject constructor(
             }
 
             // Step 2: Fetch from API in the background and update database
+            android.util.Log.d("HomeViewModel", "Fetching stations from API: GET /api/v1/charging-stations")
             when (val result = stationRepository.getAllStations(page = 1, pageSize = 100)) {
                 is Result.Success -> {
+                    android.util.Log.d("HomeViewModel", "Successfully loaded ${result.data.size} stations from API")
                     // Step 3: Update UI with fresh data from API
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -94,6 +107,7 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 is Result.Error -> {
+                    android.util.Log.e("HomeViewModel", "Failed to load stations from API: ${result.message}")
                     // Keep cached data visible, just clear loading state
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
@@ -109,25 +123,34 @@ class HomeViewModel @Inject constructor(
 
     fun loadUpcomingReservations() {
         viewModelScope.launch {
+            android.util.Log.d("HomeViewModel", "Loading upcoming reservations")
             val nic = authManager.getCurrentUserNic()
+
             if (nic == null) {
+                android.util.Log.w("HomeViewModel", "Cannot load reservations - user NIC is null")
                 _uiState.value = _uiState.value.copy(error = "User not authenticated")
                 return@launch
             }
-            
+
+            android.util.Log.d("HomeViewModel", "Fetching reservations for NIC: $nic")
             when (val result = reservationRepository.getMyReservations(nic)) {
                 is Result.Success -> {
+                    android.util.Log.d("HomeViewModel", "Received ${result.data.size} reservations from API")
+
                     // Get the most recent upcoming reservation
                     val upcomingReservation = result.data
                         .filter { it.status in listOf("PENDING", "APPROVED") }
                         .sortedBy { it.startTime }
                         .firstOrNull()
-                    
+
+                    android.util.Log.d("HomeViewModel", "Upcoming reservation: ${upcomingReservation?.id ?: "none"}")
+
                     _uiState.value = _uiState.value.copy(
                         upcomingReservation = upcomingReservation
                     )
                 }
                 is Result.Error -> {
+                    android.util.Log.e("HomeViewModel", "Failed to load reservations: ${result.message}")
                     _uiState.value = _uiState.value.copy(
                         error = result.message
                     )
@@ -165,5 +188,15 @@ class HomeViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    /**
+     * Refresh all data (stations and reservations)
+     * Call this after login or when user pulls to refresh
+     */
+    fun refreshData() {
+        android.util.Log.d("HomeViewModel", "Refreshing all data")
+        loadAllStations()
+        loadUpcomingReservations()
     }
 }
