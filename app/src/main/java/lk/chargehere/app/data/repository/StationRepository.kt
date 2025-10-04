@@ -101,12 +101,14 @@ class StationRepository @Inject constructor(
                     android.util.Log.d("StationRepository", "Station has ${stationDto.operatingHours?.size ?: 0} operating hours")
 
                     // Save to database (entity doesn't include operating hours)
-                    val stationEntity = stationDto.toEntity()
+                    // Pass explicit stationId since API returns ObjectId structure
+                    val stationEntity = stationDto.toEntity(stationId)
                     stationDao.insertStations(listOf(stationEntity))
                     android.util.Log.d("StationRepository", "Saved station to database")
 
                     // Convert DTO directly to domain to preserve operating hours
-                    Result.Success(stationDto.toDomain())
+                    // Pass explicit stationId since API returns ObjectId structure
+                    Result.Success(stationDto.toDomain(stationId))
                 } else {
                     android.util.Log.w("StationRepository", "API returned successful but null station body")
                     Result.Error("Station not found")

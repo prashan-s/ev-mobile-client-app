@@ -2,28 +2,32 @@ package lk.chargehere.app.data.remote.dto
 
 import com.google.gson.annotations.SerializedName
 
-// Station ID DTO for complex object responses
-data class StationIdDto(
-    val timestamp: Long,
-    val creationTime: String
-)
+// MongoDB ObjectId structure
+data class ObjectIdDto(
+    @SerializedName("timestamp")
+    val timestamp: Int? = null,
+    @SerializedName("creationTime")
+    val creationTime: String? = null
+) {
+    // Helper to convert to string ID
+    fun toIdString(): String = creationTime ?: timestamp?.toString() ?: ""
+}
 
 // Station DTOs - Handles both list (simple id) and detail (complex id) responses
 data class StationDto(
     // ID can be either string (list) or complex object (detail)
-    // Gson will try to deserialize 'id' field to whichever type matches
-    val id: Any? = null,  // Can be String or StationIdDto
+    @SerializedName("id")
+    val id: Any? = null,  // Can be String or ObjectIdDto
 
     val name: String = "",
     @SerializedName("stationCode")
     val stationCode: String? = null,
 
-    // Location can be object (list) or fields spread out (detail)
+    // Location is always an object
     val location: LocationDto? = null,
-    val address: String? = null,  // For detail endpoint
+    val address: String? = null,
 
-    // Type can be "AC"/"DC" (list) or "ac"/"dc" (detail)
-    val type: String? = null,
+    // Type handling
     @SerializedName("stationType")
     val stationType: String? = null,
 
@@ -34,55 +38,65 @@ data class StationDto(
     @SerializedName("pricePerHour")
     val pricePerHour: Double? = null,
 
-    val status: String? = null,
     @SerializedName("isActive")
     val isActive: Boolean? = null,
 
-    // Schedule/operating hours
-    val schedule: List<ScheduleDto>? = null,
+    // Operating hours
     @SerializedName("operatingHours")
     val operatingHours: List<OperatingHourDto>? = null,
 
-    @SerializedName("operatorId")
-    val operatorId: String? = null,
     @SerializedName("createdBy")
-    val createdBy: StationIdDto? = null,
+    val createdBy: Any? = null, // Can be ObjectIdDto
 
-    @SerializedName("createdAt")
-    val createdAt: String? = null,
     @SerializedName("createdDate")
     val createdDate: String? = null,
-    @SerializedName("updatedAt")
-    val updatedAt: String? = null,
 
     @SerializedName("domainEvents")
     val domainEvents: List<Map<String, Any>>? = null
 ) {
     // Helper properties for unified access
-    fun getStationId(): String = when (id) {
-        is String -> id
-        is Map<*, *> -> {
-            // Handle complex object as Map
-            (id["timestamp"] as? Double)?.toLong()?.toString() ?: ""
+    fun getStationId(): String {
+        return try {
+            when (id) {
+                is String -> id
+                is Map<*, *> -> {
+                    // Handle ObjectId as Map - extract timestamp or creationTime
+                    val timestamp = id["timestamp"] as? Number
+                    val creationTime = id["creationTime"] as? String
+                    
+                    // Prefer using a hash of creationTime or timestamp for uniqueness
+                    creationTime?.let { 
+                        // Extract just the hex portion if it looks like a MongoDB ObjectId
+                        if (it.length == 24 && it.matches(Regex("[a-f0-9]{24}"))) {
+                            it
+                        } else {
+                            // Otherwise use timestamp
+                            timestamp?.toString() ?: ""
+                        }
+                    } ?: timestamp?.toString() ?: ""
+                }
+                else -> {
+                    android.util.Log.w("StationDto", "Unable to extract station ID from: $id")
+                    ""
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("StationDto", "Error extracting station ID", e)
+            ""
         }
-        else -> ""
     }
 
     fun getStationLatitude(): Double = location?.latitude ?: 0.0
 
     fun getStationLongitude(): Double = location?.longitude ?: 0.0
 
-    fun getStationAddress(): String = location?.address ?: address ?: ""
+    fun getStationAddress(): String = address ?: location?.address ?: ""
 
     fun getStationCity(): String = location?.city ?: ""
 
-    fun getUnifiedStationType(): String = type ?: stationType ?: ""
+    fun getUnifiedStationType(): String = stationType ?: "ac"
 
-    fun getStationIsActive(): Boolean = when {
-        isActive != null -> isActive
-        status == "active" -> true
-        else -> false
-    }
+    fun getStationIsActive(): Boolean = isActive ?: false
 
     // Backward compatibility properties
     val maxKw: Double
@@ -101,18 +115,6 @@ data class LocationDto(
     val city: String? = null,
     val latitude: Double,
     val longitude: Double
-)
-
-// Schedule DTOs for station availability (list endpoint)
-data class ScheduleDto(
-    val dayOfWeek: String,
-    val isOpen: Boolean,
-    val timeSlots: List<TimeSlotDto>? = null
-)
-
-data class TimeSlotDto(
-    val startTime: String,
-    val endTime: String
 )
 
 // Operating hours DTO for station detail endpoint

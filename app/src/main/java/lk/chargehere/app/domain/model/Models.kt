@@ -20,7 +20,8 @@ enum class UserRole {
 }
 
 data class Station(
-    val id: String, // Changed from stationId to id
+    val id: String, // Backend ID (MongoDB ObjectId)
+    val stationCode: String? = null, // Display ID
     val name: String,
     val address: String? = null,
     val latitude: Double,
@@ -43,7 +44,8 @@ data class OperatingHour(
 )
 
 data class Reservation(
-    val id: String, // Changed from reservationId to id
+    val id: String, // Backend ID (MongoDB ObjectId)
+    val bookingNumber: String? = null, // Display ID
     val stationId: String,
     val userId: String,
     val status: String, // Changed to String to match API

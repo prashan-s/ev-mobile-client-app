@@ -340,7 +340,7 @@ private fun ClarityUpcomingReservationItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Reservation #${reservation.id.takeLast(6)}",
+                    text = reservation.bookingNumber?.let { "Booking $it" } ?: "Reservation #${reservation.id.takeLast(6)}",
                     style = MaterialTheme.typography.labelMedium,
                     color = ClarityMediumGray
                 )

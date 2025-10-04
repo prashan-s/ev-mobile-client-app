@@ -44,7 +44,7 @@ fun ReservationFlowScreen(
         if (uiState.isBookingSuccessful && uiState.bookingResponse != null) {
             // Navigate to confirmation with booking ID
             val bookingId = uiState.bookingResponse!!.id
-                ?: uiState.bookingResponse!!.bookingNumber
+                ?: uiState.bookingResponse!!.id
                 ?: "unknown"
             onNavigateToConfirmation(bookingId)
         }
@@ -157,19 +157,12 @@ private fun ModernErrorState(
                     modifier = Modifier.size(48.dp)
                 )
                 Spacer(modifier = Modifier.height(ClaritySpacing.md))
-                Text(
-                    text = "Error",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = ClarityDarkGray,
-                    fontWeight = FontWeight.SemiBold
+
+                ClarityFormattedError(
+                    errorMessage = error,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(ClaritySpacing.sm))
-                Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ClarityMediumGray,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
+
                 Spacer(modifier = Modifier.height(ClaritySpacing.lg))
                 ClarityPrimaryButton(
                     text = "OK",

@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 // Reservation DTOs - Updated to match new API spec
 data class ReservationDto(
+    @SerializedName("id")
     val id: String? = null,
     @SerializedName("evOwnerNIC")
     val evOwnerNIC: String,
@@ -31,28 +32,24 @@ data class BookingDetailDto(
     val id: String? = null,
     @SerializedName("bookingNumber")
     val bookingNumber: String? = null,
-    @SerializedName("effectiveBookingNumber")
-    val effectiveBookingNumber: String? = null,
     @SerializedName("evOwnerNIC")
     val evOwnerNIC: String? = null,
+    @SerializedName("evOwnerFirstName")
+    val evOwnerFirstName: String? = null,
+    @SerializedName("evOwnerLastName")
+    val evOwnerLastName: String? = null,
+    @SerializedName("evOwnerFullName")
+    val evOwnerFullName: String? = null,
     @SerializedName("chargingStationId")
     val chargingStationId: String? = null,
+    @SerializedName("stationCode")
+    val stationCode: String? = null,
+    @SerializedName("chargingStationName")
+    val chargingStationName: String? = null,
     @SerializedName("bookingDate")
     val bookingDate: String? = null,
     @SerializedName("reservationDateTime")
     val reservationDateTime: String? = null,
-    @SerializedName("physicalSlot")
-    val physicalSlot: Int? = null,
-    @SerializedName("effectivePhysicalSlot")
-    val effectivePhysicalSlot: Int? = null,
-    @SerializedName("endDateTime")
-    val endDateTime: String? = null,
-    @SerializedName("effectiveEndDateTime")
-    val effectiveEndDateTime: String? = null,
-    @SerializedName("durationMinutes")
-    val durationMinutes: Int? = null,
-    @SerializedName("effectiveDurationMinutes")
-    val effectiveDurationMinutes: Int? = null,
     @SerializedName("status")
     val status: String? = null,
     @SerializedName("qrCode")
@@ -65,10 +62,14 @@ data class BookingDetailDto(
     val cancelledDate: String? = null,
     @SerializedName("cancelledBy")
     val cancelledBy: String? = null,
+    @SerializedName("cancelledByName")
+    val cancelledByName: String? = null,
+    @SerializedName("cancelledByRole")
+    val cancelledByRole: String? = null,
     @SerializedName("cancellationReason")
     val cancellationReason: String? = null,
-    @SerializedName("domainEvents")
-    val domainEvents: List<Map<String, Any>>? = null
+    @SerializedName("canBeModified")
+    val canBeModified: Boolean? = null
 ) {
     // Helper to get ID as string
     fun getIdString(): String = id ?: ""
@@ -79,17 +80,11 @@ data class BookingDetailDto(
     // Helper to get timestamp for created date
     fun getTimestamp(): Long = System.currentTimeMillis()
 
-    // Helper to resolve the effective booking number (fallback to bookingNumber if effectiveBookingNumber is null)
-    fun resolveBookingNumber(): String = effectiveBookingNumber ?: bookingNumber ?: ""
+    // Helper to get station name
+    fun getStationName(): String = chargingStationName ?: ""
 
-    // Helper to resolve the effective physical slot
-    fun resolvePhysicalSlot(): Int = effectivePhysicalSlot ?: physicalSlot ?: 1
-
-    // Helper to resolve the effective duration in minutes
-    fun resolveDurationMinutes(): Int = effectiveDurationMinutes ?: durationMinutes ?: 60
-
-    // Helper to resolve the effective end date time
-    fun resolveEndDateTime(): String = effectiveEndDateTime ?: endDateTime ?: ""
+    // Helper to get owner full name
+    fun getOwnerFullName(): String = evOwnerFullName ?: "$evOwnerFirstName $evOwnerLastName".trim()
 }
 
 data class CreateBookingRequest(
@@ -112,12 +107,20 @@ data class CreateBookingResponse(
     val id: String? = null,
     @SerializedName("bookingNumber")
     val bookingNumber: String? = null,
-    @SerializedName("effectiveBookingNumber")
-    val effectiveBookingNumber: String? = null,
     @SerializedName("evOwnerNIC")
     val evOwnerNIC: String? = null,
+    @SerializedName("evOwnerFirstName")
+    val evOwnerFirstName: String? = null,
+    @SerializedName("evOwnerLastName")
+    val evOwnerLastName: String? = null,
+    @SerializedName("evOwnerFullName")
+    val evOwnerFullName: String? = null,
     @SerializedName("chargingStationId")
     val chargingStationId: String? = null,
+    @SerializedName("stationCode")
+    val stationCode: String? = null,
+    @SerializedName("chargingStationName")
+    val chargingStationName: String? = null,
     @SerializedName("bookingDate")
     val bookingDate: String? = null,
     @SerializedName("reservationDateTime")
@@ -133,9 +136,13 @@ data class CreateBookingResponse(
     fun toBookingDetailDto(): BookingDetailDto = BookingDetailDto(
         id = id,
         bookingNumber = bookingNumber,
-        effectiveBookingNumber = effectiveBookingNumber,
         evOwnerNIC = evOwnerNIC,
+        evOwnerFirstName = evOwnerFirstName,
+        evOwnerLastName = evOwnerLastName,
+        evOwnerFullName = evOwnerFullName,
         chargingStationId = chargingStationId,
+        stationCode = stationCode,
+        chargingStationName = chargingStationName,
         bookingDate = bookingDate,
         reservationDateTime = reservationDateTime,
         status = status,
@@ -144,8 +151,10 @@ data class CreateBookingResponse(
         updatedDate = null,
         cancelledDate = null,
         cancelledBy = null,
+        cancelledByName = null,
+        cancelledByRole = null,
         cancellationReason = null,
-        domainEvents = null
+        canBeModified = null
     )
 }
 

@@ -11,6 +11,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,9 +25,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import lk.chargehere.app.ui.theme.*
+import lk.chargehere.app.utils.ErrorParser
 
 // === CLARITY DESIGN SYSTEM COMPONENTS ===
 // Universal components following strict Clarity principles
@@ -421,6 +425,118 @@ fun ClarityModal(
                 .clickable(enabled = false) { }
         ) {
             content()
+        }
+    }
+}
+
+/**
+ * Formatted error display component
+ * Automatically parses error JSON and displays title and description
+ */
+@Composable
+fun ClarityFormattedError(
+    errorMessage: String,
+    modifier: Modifier = Modifier
+) {
+    val formattedError = remember(errorMessage) {
+        ErrorParser.parseAndFormatError(errorMessage)
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(ClaritySpacing.sm))
+            .background(ClarityErrorRed.copy(alpha = 0.1f))
+            .padding(ClaritySpacing.md),
+        verticalArrangement = Arrangement.spacedBy(ClaritySpacing.xs)
+    ) {
+        Row(
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(ClaritySpacing.sm)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ErrorOutline,
+                contentDescription = null,
+                tint = ClarityErrorRed,
+                modifier = Modifier.size(20.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = formattedError.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = ClarityErrorRed,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = formattedError.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ClarityErrorRed.copy(alpha = 0.9f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Inline error banner with formatted error display
+ */
+@Composable
+fun ClarityErrorBanner(
+    errorMessage: String?,
+    onDismiss: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    if (errorMessage != null) {
+        val formattedError = remember(errorMessage) {
+            ErrorParser.parseAndFormatError(errorMessage)
+        }
+
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(ClaritySpacing.sm))
+                .background(ClarityErrorRed.copy(alpha = 0.1f))
+                .padding(ClaritySpacing.md)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(ClaritySpacing.sm)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    tint = ClarityErrorRed,
+                    modifier = Modifier.size(20.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = formattedError.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = ClarityErrorRed,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = formattedError.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ClarityErrorRed.copy(alpha = 0.9f)
+                    )
+                }
+                if (onDismiss != null) {
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(20.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Dismiss",
+                            tint = ClarityErrorRed,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }

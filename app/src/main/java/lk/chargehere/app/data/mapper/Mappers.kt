@@ -48,9 +48,9 @@ fun User.toEntity(): UserEntity {
 }
 
 // Station Mappers - Updated for new API structure
-fun StationDto.toEntity(): StationEntity {
+fun StationDto.toEntity(explicitStationId: String? = null): StationEntity {
     return StationEntity(
-        stationId = getStationId(),
+        stationId = explicitStationId ?: getStationId(),
         name = name,
         address = getStationAddress(),
         latitude = getStationLatitude(),
@@ -63,9 +63,10 @@ fun StationDto.toEntity(): StationEntity {
     )
 }
 
-fun StationDto.toDomain(): Station {
+fun StationDto.toDomain(explicitStationId: String? = null): Station {
     return Station(
-        id = getStationId(),
+        id = explicitStationId ?: getStationId(),
+        stationCode = stationCode,
         name = name,
         address = getStationAddress(),
         latitude = getStationLatitude(),
@@ -76,7 +77,7 @@ fun StationDto.toDomain(): Station {
         isAvailable = isAvailable,
         distanceMeters = null,
         operatingHours = operatingHours?.map { it.toDomain() },
-        createdAt = System.currentTimeMillis(),
+        createdAt = parseISOToTimestamp(createdDate ?: ""),
         updatedAt = System.currentTimeMillis()
     )
 }
@@ -84,6 +85,7 @@ fun StationDto.toDomain(): Station {
 fun StationEntity.toDomain(): Station {
     return Station(
         id = stationId,
+        stationCode = null, // Not stored in entity
         name = name,
         address = address,
         latitude = latitude,
@@ -137,33 +139,35 @@ fun BookingDetailDto.toEntity(): ReservationEntity {
         reservationId = getIdString(),
         stationId = getStationIdString(),
         userId = evOwnerNIC ?: "",
-        status = status ?: "PENDING",
+        status = status ?: "pending",
         startTimestamp = parseISOToTimestamp(reservationDateTime ?: ""),
         durationMinutes = 60, // Default duration
         qrPayload = qrCode ?: bookingNumber, // Use QR code if available, otherwise booking number
-        stationName = null, // Will be populated from station data if needed
-        createdAt = getTimestamp()
+        stationName = getStationName(), // Use helper method to get station name
+        createdAt = parseISOToTimestamp(createdDate ?: "")
     )
 }
 
 fun BookingDetailDto.toDomain(): Reservation {
     return Reservation(
         id = getIdString(),
+        bookingNumber = bookingNumber,
         stationId = getStationIdString(),
         userId = evOwnerNIC ?: "",
-        status = status ?: "PENDING",
+        status = status ?: "pending",
         startTime = parseISOToTimestamp(reservationDateTime ?: ""),
-        durationMinutes = 60,
+        durationMinutes = 60, // Default duration
         qrPayload = qrCode ?: bookingNumber ?: "",
-        stationName = "", // Will be populated separately if needed
-        createdAt = getTimestamp(),
-        updatedAt = System.currentTimeMillis()
+        stationName = getStationName(), // Use helper method to get station name
+        createdAt = parseISOToTimestamp(createdDate ?: ""),
+        updatedAt = parseISOToTimestamp(updatedDate ?: createdDate ?: "")
     )
 }
 
 fun ReservationEntity.toDomain(): Reservation {
     return Reservation(
         id = reservationId,
+        bookingNumber = null, // Not stored in entity
         stationId = stationId,
         userId = userId,
         status = status,

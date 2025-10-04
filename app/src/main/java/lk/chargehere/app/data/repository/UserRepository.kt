@@ -8,6 +8,7 @@ import lk.chargehere.app.data.remote.api.AuthApiService
 import lk.chargehere.app.data.remote.dto.*
 import lk.chargehere.app.domain.model.User
 import lk.chargehere.app.utils.Result
+import lk.chargehere.app.utils.ErrorParser
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -56,7 +57,8 @@ class UserRepository @Inject constructor(
                 }
             } else {
                 val errorBody = response.errorBody()?.string()
-                Result.Error("Registration failed: ${response.code()} - $errorBody")
+                val formattedError = ErrorParser.parseError(errorBody)
+                Result.Error(formattedError)
             }
         } catch (e: Exception) {
             Result.Error("Network error: ${e.message}")
@@ -117,7 +119,8 @@ class UserRepository @Inject constructor(
                 }
             } else {
                 val errorBody = response.errorBody()?.string()
-                Result.Error("Login failed: ${response.code()} - $errorBody")
+                val formattedError = ErrorParser.parseError(errorBody)
+                Result.Error(formattedError)
             }
         } catch (e: Exception) {
             android.util.Log.e("UserRepository", "Login error: ${e.message}", e)
@@ -149,7 +152,8 @@ class UserRepository @Inject constructor(
                 }
             } else {
                 val errorBody = response.errorBody()?.string()
-                Result.Error("Google sign-in failed: ${response.code()} - $errorBody")
+                val formattedError = ErrorParser.parseError(errorBody)
+                Result.Error(formattedError)
             }
         } catch (e: Exception) {
             Result.Error("Network error: ${e.message}")
@@ -185,7 +189,8 @@ class UserRepository @Inject constructor(
                 }
             } else {
                 val errorBody = response.errorBody()?.string()
-                Result.Error("Update failed: ${response.code()} - $errorBody")
+                val formattedError = ErrorParser.parseError(errorBody)
+                Result.Error(formattedError)
             }
         } catch (e: Exception) {
             Result.Error("Network error: ${e.message}")

@@ -9,6 +9,7 @@ import lk.chargehere.app.data.remote.dto.*
 import lk.chargehere.app.domain.model.Reservation
 import lk.chargehere.app.domain.model.ReservationStatus
 import lk.chargehere.app.utils.Result
+import lk.chargehere.app.utils.ErrorParser
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -42,7 +43,7 @@ class ReservationRepository @Inject constructor(
                     android.util.Log.d("ReservationRepository", "Booking Number: ${bookingResponse.bookingNumber}")
                     android.util.Log.d("ReservationRepository", "Status: ${bookingResponse.status}")
                     android.util.Log.d("ReservationRepository", "QR Code: ${bookingResponse.qrCode}")
-
+                    
                     // Refresh reservations after creating a new one
                     getBookingsByEVOwner(evOwnerNIC)
                     Result.Success(bookingResponse)
@@ -53,7 +54,8 @@ class ReservationRepository @Inject constructor(
             } else {
                 val errorBody = response.errorBody()?.string()
                 android.util.Log.e("ReservationRepository", "Booking failed: ${response.code()} - $errorBody")
-                Result.Error("Booking failed: ${response.code()} - $errorBody")
+                val formattedError = ErrorParser.parseError(errorBody)
+                Result.Error(formattedError)
             }
         } catch (e: Exception) {
             android.util.Log.e("ReservationRepository", "Network error while creating booking: ${e.message}", e)
@@ -61,20 +63,6 @@ class ReservationRepository @Inject constructor(
         }
     }
 
-    // Convenience method that converts timestamp to ISO string
-    suspend fun placeReservation(
-        evOwnerNIC: String,
-        stationId: String,
-        startTime: Long
-    ): Result<CreateBookingResponse> {
-        val isoDateTime = Instant.ofEpochMilli(startTime)
-            .atZone(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-
-        android.util.Log.d("ReservationRepository", "Converting timestamp $startTime to ISO: $isoDateTime")
-        return createBooking(evOwnerNIC, stationId, isoDateTime)
-    }
-    
     // Get booking by ID using GetBookingById
     suspend fun getBookingById(bookingId: String): Result<BookingDetailDto> {
         return try {
@@ -160,7 +148,8 @@ class ReservationRepository @Inject constructor(
                 Result.Success(Unit)
             } else {
                 val errorBody = response.errorBody()?.string()
-                Result.Error("Cancellation failed: ${response.code()} - $errorBody")
+                val formattedError = ErrorParser.parseError(errorBody)
+                Result.Error(formattedError)
             }
         } catch (e: Exception) {
             Result.Error("Network error: ${e.message}")

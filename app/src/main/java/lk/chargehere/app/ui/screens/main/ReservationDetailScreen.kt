@@ -184,26 +184,16 @@ private fun ClarityDetailErrorState(
                 tint = ClarityErrorRed,
                 modifier = Modifier.size(64.dp)
             )
-            
+
             Spacer(modifier = Modifier.height(ClaritySpacing.md))
-            
-            Text(
-                text = "Something went wrong",
-                style = MaterialTheme.typography.headlineSmall,
-                color = ClarityDarkGray
+
+            ClarityFormattedError(
+                errorMessage = error,
+                modifier = Modifier.fillMaxWidth()
             )
-            
-            Spacer(modifier = Modifier.height(ClaritySpacing.sm))
-            
-            Text(
-                text = error,
-                style = MaterialTheme.typography.bodyMedium,
-                color = ClarityMediumGray,
-                textAlign = TextAlign.Center
-            )
-            
+
             Spacer(modifier = Modifier.height(ClaritySpacing.lg))
-            
+
             ClarityPrimaryButton(
                 text = "Try Again",
                 onClick = onRetry
@@ -282,7 +272,7 @@ private fun ClarityReservationDetailContent(
                 ModernInfoRow(
                     icon = Icons.Default.Tag,
                     label = "Booking ID",
-                    value = "#${reservation.id.takeLast(8).uppercase()}"
+                    value = reservation.bookingNumber ?: "#${reservation.id.takeLast(8).uppercase()}"
                 )
             }
         }
@@ -656,30 +646,10 @@ private fun ClarityCancelReservationDialog(
             if (error != null) {
                 Spacer(modifier = Modifier.height(ClaritySpacing.sm))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(ClaritySpacing.xs))
-                        .background(ClarityErrorRed.copy(alpha = 0.1f))
-                        .padding(ClaritySpacing.sm)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ErrorOutline,
-                            contentDescription = null,
-                            tint = ClarityErrorRed,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(ClaritySpacing.xs))
-                        Text(
-                            text = error,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = ClarityErrorRed
-                        )
-                    }
-                }
+                ClarityFormattedError(
+                    errorMessage = error,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             Spacer(modifier = Modifier.height(ClaritySpacing.lg))
