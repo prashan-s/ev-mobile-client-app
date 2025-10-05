@@ -65,19 +65,31 @@ class ReservationsViewModel @Inject constructor(
                     }
 
                     val now = System.currentTimeMillis()
+                    val activeStatuses = setOf("PENDING", "APPROVED", "CONFIRMED", "IN_PROGRESS")
 
                     val upcoming = allReservations.filter { reservation ->
                         val statusUpper = reservation.status.uppercase()
                         val isFutureReservation = reservation.startTime > now
-                        val isActiveStatus = statusUpper in listOf("PENDING", "APPROVED", "CONFIRMED")
-                        android.util.Log.d("ReservationsViewModel", "Filter upcoming: id=${reservation.id}, status='${reservation.status}' (upper='$statusUpper'), isFuture=$isFutureReservation, isActive=$isActiveStatus")
-                        isActiveStatus && isFutureReservation
+                        val isInProgress = statusUpper == "IN_PROGRESS"
+                        val isActiveStatus = statusUpper in activeStatuses
+                        android.util.Log.d(
+                            "ReservationsViewModel",
+                            "Filter upcoming: id=${reservation.id}, status='${reservation.status}' (upper='$statusUpper'), isFuture=$isFutureReservation, isActive=$isActiveStatus, isInProgress=$isInProgress"
+                        )
+                        (isInProgress || isFutureReservation) && isActiveStatus
                     }.sortedBy { it.startTime }
+
+                    val upcomingIds = upcoming.map { it.id }.toSet()
 
                     val past = allReservations.filter { reservation ->
                         val statusUpper = reservation.status.uppercase()
-                        statusUpper in listOf("COMPLETED", "CANCELLED") ||
-                        (reservation.startTime <= now)
+                        when {
+                            reservation.id in upcomingIds -> false
+                            statusUpper in listOf("COMPLETED", "CANCELLED") -> true
+                            statusUpper !in activeStatuses -> true
+                            reservation.startTime <= now -> true
+                            else -> false
+                        }
                     }.sortedByDescending { it.startTime }
 
                     android.util.Log.d("ReservationsViewModel", "Categorized: ${upcoming.size} upcoming, ${past.size} past")

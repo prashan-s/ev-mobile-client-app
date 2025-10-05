@@ -211,7 +211,17 @@ private fun ClarityReservationDetailContent(
         Instant.ofEpochMilli(reservation.startTime),
         ZoneId.systemDefault()
     )
-    val endDateTime = startDateTime.plusMinutes(reservation.durationMinutes.toLong())
+    val endDateTime = reservation.endTime?.let {
+        LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
+    } ?: startDateTime.plusMinutes(reservation.durationMinutes.toLong())
+    val statusLower = reservation.status.lowercase()
+    val createdDateTime = LocalDateTime.ofInstant(
+        Instant.ofEpochMilli(reservation.createdAt),
+        ZoneId.systemDefault()
+    )
+    val cancelledDateTime = reservation.cancelledAt?.let {
+        LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
+    }
 
     Column(
         modifier = Modifier
@@ -233,7 +243,8 @@ private fun ClarityReservationDetailContent(
             startDateTime = startDateTime,
             endDateTime = endDateTime,
             durationMinutes = reservation.durationMinutes,
-            status = reservation.status
+            status = reservation.status,
+            stationCity = reservation.stationCity
         )
 
         Spacer(modifier = Modifier.height(ClaritySpacing.lg))
@@ -250,6 +261,22 @@ private fun ClarityReservationDetailContent(
                     label = "Station",
                     value = reservation.stationName
                 )
+
+                reservation.stationCode?.takeIf { it.isNotBlank() }?.let { code ->
+                    ModernInfoRow(
+                        icon = Icons.Default.Label,
+                        label = "Station Code",
+                        value = code
+                    )
+                }
+
+                reservation.stationType?.takeIf { it.isNotBlank() }?.let { type ->
+                    ModernInfoRow(
+                        icon = Icons.Default.FlashOn,
+                        label = "Charger Type",
+                        value = type.uppercase()
+                    )
+                }
 
                 ModernInfoRow(
                     icon = Icons.Default.CalendarMonth,
@@ -269,10 +296,45 @@ private fun ClarityReservationDetailContent(
                     value = "${reservation.durationMinutes} minutes"
                 )
 
+                reservation.physicalSlot?.let { slot ->
+                    ModernInfoRow(
+                        icon = Icons.Default.EventSeat,
+                        label = "Assigned Slot",
+                        value = "Slot $slot"
+                    )
+                }
+
+                reservation.evOwnerName?.takeIf { it.isNotBlank() }?.let { attendee ->
+                    ModernInfoRow(
+                        icon = Icons.Default.Person,
+                        label = "Booked For",
+                        value = attendee
+                    )
+                }
+
+                reservation.pricePerHour?.let { price ->
+                    val formattedPrice = if (price % 1.0 == 0.0) {
+                        price.toInt().toString()
+                    } else {
+                        String.format("%.2f", price)
+                    }
+                    ModernInfoRow(
+                        icon = Icons.Default.Payments,
+                        label = "Rate",
+                        value = "Rs $formattedPrice per hour"
+                    )
+                }
+
                 ModernInfoRow(
                     icon = Icons.Default.Tag,
                     label = "Booking ID",
                     value = reservation.bookingNumber ?: "#${reservation.id.takeLast(8).uppercase()}"
+                )
+
+                ModernInfoRow(
+                    icon = Icons.Default.EventNote,
+                    label = "Created On",
+                    value = createdDateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy • HH:mm"))
                 )
             }
         }
@@ -280,17 +342,72 @@ private fun ClarityReservationDetailContent(
         Spacer(modifier = Modifier.height(ClaritySpacing.lg))
 
         // QR Code Section (only for active bookings)
-        if (reservation.status.lowercase() == "confirmed" || reservation.status.lowercase() == "in_progress") {
-            ModernQRCodeCard(reservationId = reservation.id)
+        if (statusLower == "confirmed" || statusLower == "in_progress") {
+            val qrContent = reservation.qrPayload?.takeIf { it.isNotBlank() }
+                ?: reservation.bookingNumber?.takeIf { it.isNotBlank() }
+                ?: reservation.id
+            val referenceLabel = reservation.bookingNumber?.takeIf { it.isNotBlank() }?.let { "Booking $it" }
+
+            ModernQRCodeCard(
+                qrPayload = qrContent,
+                referenceLabel = referenceLabel
+            )
             Spacer(modifier = Modifier.height(ClaritySpacing.lg))
         }
 
         // Action Buttons
-        if (reservation.status.lowercase() == "confirmed") {
+        if (statusLower in listOf("confirmed", "in_progress", "pending")) {
             ModernActionButtons(
+                canCancel = (statusLower == "pending" || statusLower == "confirmed") && reservation.canBeModified,
                 onGetDirections = { /* Open maps */ },
                 onCancelReservation = onCancelReservation
             )
+            Spacer(modifier = Modifier.height(ClaritySpacing.lg))
+        }
+
+        if (
+            statusLower == "cancelled" && (
+                reservation.cancellationReason?.isNotBlank() == true ||
+                reservation.cancelledBy != null ||
+                cancelledDateTime != null
+            )
+        ) {
+            ClaritySectionHeader(text = "Cancellation Details")
+            ClarityCard {
+                Column(verticalArrangement = Arrangement.spacedBy(ClaritySpacing.md)) {
+                    reservation.cancellationReason?.takeIf { it.isNotBlank() }?.let { reason ->
+                        ModernInfoRow(
+                            icon = Icons.Default.ReportProblem,
+                            label = "Reason",
+                            value = reason
+                        )
+                    }
+
+                    val cancelledByDisplay = when {
+                        reservation.cancelledBy.isNullOrBlank() && reservation.cancelledByRole.isNullOrBlank() -> null
+                        reservation.cancelledBy.isNullOrBlank() -> reservation.cancelledByRole
+                        reservation.cancelledByRole.isNullOrBlank() -> reservation.cancelledBy
+                        else -> "${reservation.cancelledBy} (${reservation.cancelledByRole})"
+                    }
+
+                    cancelledByDisplay?.let { actor ->
+                        ModernInfoRow(
+                            icon = Icons.Default.Person,
+                            label = "Cancelled By",
+                            value = actor
+                        )
+                    }
+
+                    cancelledDateTime?.let { cancelledOn ->
+                        ModernInfoRow(
+                            icon = Icons.Default.Cancel,
+                            label = "Cancelled On",
+                            value = cancelledOn.format(DateTimeFormatter.ofPattern("MMM dd, yyyy • HH:mm"))
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(ClaritySpacing.lg))
         }
 
         // Bottom spacing
@@ -376,7 +493,8 @@ private fun ModernTimeSlotCard(
     startDateTime: LocalDateTime,
     endDateTime: LocalDateTime,
     durationMinutes: Int,
-    status: String
+    status: String,
+    stationCity: String?
 ) {
     val isActive = status.lowercase() == "confirmed" || status.lowercase() == "in_progress"
 
@@ -468,6 +586,24 @@ private fun ModernTimeSlotCard(
                     )
                 }
             }
+
+            stationCity?.takeIf { it.isNotBlank() }?.let { city ->
+                Spacer(modifier = Modifier.height(ClaritySpacing.md))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Place,
+                        contentDescription = null,
+                        tint = ClarityMediumGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(ClaritySpacing.xs))
+                    Text(
+                        text = city,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ClarityMediumGray
+                    )
+                }
+            }
         }
     }
 }
@@ -507,7 +643,12 @@ private fun ModernInfoRow(
 }
 
 @Composable
-private fun ModernQRCodeCard(reservationId: String) {
+private fun ModernQRCodeCard(
+    qrPayload: String?,
+    referenceLabel: String?
+) {
+    val resolvedPayload = qrPayload?.takeIf { it.isNotBlank() }
+
     ClarityCard(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -543,10 +684,23 @@ private fun ModernQRCodeCard(reservationId: String) {
                     .background(ClarityPureWhite)
                     .padding(ClaritySpacing.sm)
             ) {
-                QRCodeGenerator(
-                    content = "reservation:$reservationId",
-                    modifier = Modifier.fillMaxSize()
-                )
+                if (resolvedPayload != null) {
+                    QRCodeGenerator(
+                        content = resolvedPayload,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "QR unavailable",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = ClarityMediumGray
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(ClaritySpacing.md))
@@ -566,12 +720,22 @@ private fun ModernQRCodeCard(reservationId: String) {
                 color = ClarityMediumGray,
                 textAlign = TextAlign.Center
             )
+
+            referenceLabel?.takeIf { it.isNotBlank() }?.let { label ->
+                Spacer(modifier = Modifier.height(ClaritySpacing.sm))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = ClarityDarkGray
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun ModernActionButtons(
+    canCancel: Boolean,
     onGetDirections: () -> Unit,
     onCancelReservation: () -> Unit
 ) {
@@ -585,11 +749,13 @@ private fun ModernActionButtons(
             icon = Icons.Default.Directions
         )
 
-        ClaritySecondaryButton(
-            text = "Cancel Booking",
-            onClick = onCancelReservation,
-            modifier = Modifier.fillMaxWidth()
-        )
+        if (canCancel) {
+            ClaritySecondaryButton(
+                text = "Cancel Booking",
+                onClick = onCancelReservation,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 

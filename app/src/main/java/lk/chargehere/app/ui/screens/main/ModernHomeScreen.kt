@@ -186,12 +186,17 @@ fun ModernHomeScreen(
                     .align(Alignment.BottomCenter)
                     .padding(
                         horizontal = ClaritySpacing.md,
-                        vertical = ClaritySpacing.xxxl + ClaritySpacing.lg // Bottom nav + margin
+                        vertical = ClaritySpacing.xxxl + ClaritySpacing.xl // Increased bottom padding for tab bar spacing
                     ),
                 upcomingReservation = uiState.upcomingReservation,
                 nearestStation = uiState.nearbyStations.firstOrNull(),
                 onReservationClick = { reservation ->
-                    onNavigateToReservationDetail(reservation.id)
+                    val destinationId = reservation.id.ifBlank { reservation.bookingNumber ?: "" }
+                    if (destinationId.isNotBlank()) {
+                        onNavigateToReservationDetail(destinationId)
+                    } else {
+                        android.util.Log.w("ModernHomeScreen", "Unable to navigate: reservation id missing")
+                    }
                 },
                 onStationClick = { station ->
                     onNavigateToStationDetail(station.id)
@@ -279,6 +284,9 @@ private fun ClarityFloatingCard(
     onReservationClick: (Reservation) -> Unit,
     onStationClick: (Station) -> Unit
 ) {
+    // Determine if there's an active booking (APPROVED status means actively in progress)
+    val hasActiveBooking = upcomingReservation?.status?.uppercase() == "APPROVED"
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -299,14 +307,14 @@ private fun ClarityFloatingCard(
         Column(
             modifier = Modifier.padding(ClaritySpacing.md)
         ) {
-            if (upcomingReservation != null) {
-                // Upcoming reservation section - takes priority, hide nearest station
+            if (hasActiveBooking && upcomingReservation != null) {
+                // Active booking section - takes priority
                 ClarityReservationSection(
                     reservation = upcomingReservation,
                     onClick = { onReservationClick(upcomingReservation) }
                 )
             } else if (nearestStation != null) {
-                // Nearest station section - only show when no active reservation
+                // Nearest station section - only show when no active booking
                 ClarityNearestStationSection(
                     station = nearestStation,
                     onClick = { onStationClick(nearestStation) }
@@ -323,8 +331,13 @@ private fun ClarityReservationSection(
 ) {
     var showQRCode by remember { mutableStateOf(false) }
 
+    // Determine if this is an active booking
+    val isActiveBooking = reservation.status.uppercase() == "APPROVED"
+
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -332,17 +345,21 @@ private fun ClarityReservationSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Upcoming Reservation",
+                text = if (isActiveBooking) "Active Booking" else "Upcoming Reservation",
                 style = MaterialTheme.typography.labelMedium,
                 color = ClarityMediumGray
             )
             ClarityStatusChip(
-                text = when (reservation.status.lowercase()) {
-                    "confirmed", "pending" -> "Active"
-                    "in_progress" -> "In Progress"
-                    else -> "Active"
+                text = when (reservation.status.uppercase()) {
+                    "APPROVED" -> "Active"
+                    "PENDING" -> "Pending"
+                    else -> reservation.status
                 },
-                status = ClarityStatus.Success
+                status = when (reservation.status.uppercase()) {
+                    "APPROVED" -> ClarityStatus.Success
+                    "PENDING" -> ClarityStatus.Warning
+                    else -> ClarityStatus.Neutral
+                }
             )
         }
 
@@ -443,7 +460,6 @@ private fun ClarityNearestStationSection(
                 text = if (station.isAvailable) "Available" else "Occupied",
                 status = if (station.isAvailable) ClarityStatus.Success else ClarityStatus.Error
             )
-            Spacer(modifier = Modifier.height(ClaritySpacing.sm))
         }
         
         Spacer(modifier = Modifier.height(ClaritySpacing.sm))

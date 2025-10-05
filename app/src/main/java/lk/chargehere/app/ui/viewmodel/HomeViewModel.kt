@@ -138,8 +138,20 @@ class HomeViewModel @Inject constructor(
                     android.util.Log.d("HomeViewModel", "Received ${result.data.size} reservations from API")
 
                     // Get the most recent upcoming reservation
+                    val nowMillis = System.currentTimeMillis()
                     val upcomingReservation = result.data
-                        .filter { it.status in listOf("PENDING", "APPROVED") }
+                        .filter { reservation ->
+                            val statusUpper = reservation.status.uppercase()
+                            val isActiveStatus = statusUpper in setOf("PENDING", "APPROVED", "CONFIRMED", "IN_PROGRESS")
+                            if (!isActiveStatus) {
+                                return@filter false
+                            }
+
+                            val effectiveEnd = reservation.endTime
+                                ?: reservation.startTime + reservation.durationMinutes * 60_000L
+
+                            statusUpper == "IN_PROGRESS" || effectiveEnd >= nowMillis
+                        }
                         .sortedBy { it.startTime }
                         .firstOrNull()
 

@@ -79,7 +79,7 @@ class ReservationDetailViewModel @Inject constructor(
                         isCancelling = false,
                         cancellationSuccess = true,
                         // Update the reservation status to cancelled
-                        reservation = _uiState.value.reservation?.copy(status = "cancelled")
+                        reservation = _uiState.value.reservation?.copy(status = "CANCELLED", canBeModified = false)
                     )
                 }
                 is Result.Error -> {

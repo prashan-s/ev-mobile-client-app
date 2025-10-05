@@ -197,10 +197,24 @@ private fun ClarityUpcomingReservations(
                 verticalArrangement = Arrangement.spacedBy(ClaritySpacing.md)
             ) {
                 items(reservations) { reservation ->
+                    val reservationId = reservation.id.ifBlank { reservation.bookingNumber ?: "" }
+
                     ClarityUpcomingReservationItem(
                         reservation = reservation,
-                        onClick = { onReservationClick(reservation.id) },
-                        onCancel = { onCancelClick(reservation.id) }
+                        onClick = {
+                            if (reservationId.isNotBlank()) {
+                                onReservationClick(reservationId)
+                            } else {
+                                android.util.Log.w("ModernReservations", "Skipping reservation detail navigation due to empty id")
+                            }
+                        },
+                        onCancel = {
+                            if (reservationId.isNotBlank()) {
+                                onCancelClick(reservationId)
+                            } else {
+                                android.util.Log.w("ModernReservations", "Skipping reservation cancel due to empty id")
+                            }
+                        }
                     )
                 }
                 
@@ -241,9 +255,17 @@ private fun ClarityPastReservations(
                 verticalArrangement = Arrangement.spacedBy(ClaritySpacing.md)
             ) {
                 items(reservations) { reservation ->
+                    val reservationId = reservation.id.ifBlank { reservation.bookingNumber ?: "" }
+
                     ClarityPastReservationItem(
                         reservation = reservation,
-                        onClick = { onReservationClick(reservation.id) }
+                        onClick = {
+                            if (reservationId.isNotBlank()) {
+                                onReservationClick(reservationId)
+                            } else {
+                                android.util.Log.w("ModernReservations", "Skipping reservation detail navigation due to empty id")
+                            }
+                        }
                     )
                 }
                 
@@ -327,6 +349,20 @@ private fun ClarityUpcomingReservationItem(
     onClick: () -> Unit,
     onCancel: () -> Unit
 ) {
+    val startDateTime = LocalDateTime.ofInstant(
+        Instant.ofEpochMilli(reservation.startTime),
+        ZoneId.systemDefault()
+    )
+    val endDateTime = reservation.endTime?.let {
+        LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
+    } ?: startDateTime.plusMinutes(reservation.durationMinutes.toLong())
+    val supplementalInfo = listOfNotNull(
+        reservation.stationCode?.takeIf { it.isNotBlank() }?.let { "Code $it" },
+        reservation.physicalSlot?.let { "Slot $it" }
+    ).joinToString(" • ")
+    val statusUpper = reservation.status.uppercase()
+    val canCancel = reservation.canBeModified && statusUpper in setOf("PENDING", "CONFIRMED")
+
     ClarityCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -375,19 +411,24 @@ private fun ClarityUpcomingReservationItem(
             Spacer(modifier = Modifier.height(ClaritySpacing.xs))
             
             Text(
-                text = LocalDateTime.ofInstant(
-                    Instant.ofEpochMilli(reservation.startTime), 
-                    ZoneId.systemDefault()
-                ).format(DateTimeFormatter.ofPattern("MMM dd, yyyy • HH:mm")),
+                text = startDateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy • HH:mm")),
                 style = MaterialTheme.typography.bodyMedium,
                 color = ClarityMediumGray
             )
-            
+
             Text(
-                text = "${reservation.durationMinutes} minutes",
+                text = "${startDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))} - ${endDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))} (${reservation.durationMinutes} min)",
                 style = MaterialTheme.typography.bodySmall,
                 color = ClarityMediumGray
             )
+
+            if (supplementalInfo.isNotBlank()) {
+                Text(
+                    text = supplementalInfo,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ClarityMediumGray
+                )
+            }
             
             Spacer(modifier = Modifier.height(ClaritySpacing.md))
             
@@ -398,8 +439,13 @@ private fun ClarityUpcomingReservationItem(
             ) {
                 ClaritySecondaryButton(
                     text = "Cancel",
-                    onClick = onCancel,
-                    modifier = Modifier.weight(1f)
+                    onClick = {
+                        if (canCancel) {
+                            onCancel()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = canCancel
                 )
 
                 ClarityPrimaryButton(
@@ -417,6 +463,18 @@ private fun ClarityPastReservationItem(
     reservation: Reservation,
     onClick: () -> Unit
 ) {
+    val startDateTime = LocalDateTime.ofInstant(
+        Instant.ofEpochMilli(reservation.startTime),
+        ZoneId.systemDefault()
+    )
+    val endDateTime = reservation.endTime?.let {
+        LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
+    } ?: startDateTime.plusMinutes(reservation.durationMinutes.toLong())
+    val supplementalInfo = listOfNotNull(
+        reservation.stationCode?.takeIf { it.isNotBlank() }?.let { "Code $it" },
+        reservation.physicalSlot?.let { "Slot $it" }
+    ).joinToString(" • ")
+
     ClarityCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -451,14 +509,35 @@ private fun ClarityPastReservationItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 
+                reservation.stationCity?.takeIf { it.isNotBlank() }?.let { city ->
+                    Text(
+                        text = city,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ClarityMediumGray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
                 Text(
-                    text = LocalDateTime.ofInstant(
-                        Instant.ofEpochMilli(reservation.startTime), 
-                        ZoneId.systemDefault()
-                    ).format(DateTimeFormatter.ofPattern("MMM dd, yyyy")),
+                    text = startDateTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")),
                     style = MaterialTheme.typography.bodySmall,
                     color = ClarityMediumGray
                 )
+
+                Text(
+                    text = "${startDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))} - ${endDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ClarityMediumGray
+                )
+
+                if (supplementalInfo.isNotBlank()) {
+                    Text(
+                        text = supplementalInfo,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ClarityMediumGray
+                    )
+                }
             }
             
             Text(

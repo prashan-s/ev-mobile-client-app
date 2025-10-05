@@ -1,11 +1,12 @@
 package lk.chargehere.app.data.remote.dto
 
+import android.util.Log
 import com.google.gson.annotations.SerializedName
 
 // Reservation DTOs - Updated to match new API spec
 data class ReservationDto(
     @SerializedName("id")
-    val id: String? = null,
+    val id: Any? = null,
     @SerializedName("evOwnerNIC")
     val evOwnerNIC: String,
     @SerializedName("chargingStationId")
@@ -22,14 +23,37 @@ data class ReservationDto(
     val cancellationReason: String? = null,
     @SerializedName("bookingNumber")
     val bookingNumber: String? = null,
+    @SerializedName("endDateTime")
+    val endDateTime: String? = null,
+    @SerializedName("durationMinutes")
+    val durationMinutes: Int? = null,
+    @SerializedName("physicalSlot")
+    val physicalSlot: Int? = null,
     // Nested objects might be included
     val station: StationDto? = null
 )
 
+fun ReservationDto.getReservationId(): String {
+    return when (id) {
+        is String -> id
+        is ObjectIdDto -> id.creationTime ?: id.timestamp?.toString().orEmpty()
+        is Map<*, *> -> {
+            val map = id as Map<*, *>
+            val creationTime = map["creationTime"] as? String
+            val timestamp = (map["timestamp"] as? Number)?.toLong()
+            creationTime ?: timestamp?.toString().orEmpty()
+        }
+        else -> {
+            Log.w("ReservationDto", "Unable to parse reservation id from: $id")
+            ""
+        }
+    }
+}
+
 // Detailed booking response from GetBookingById
 data class BookingDetailDto(
     @SerializedName("id")
-    val id: String? = null,
+    val id: Any? = null,
     @SerializedName("bookingNumber")
     val bookingNumber: String? = null,
     @SerializedName("evOwnerNIC")
@@ -50,6 +74,8 @@ data class BookingDetailDto(
     val bookingDate: String? = null,
     @SerializedName("reservationDateTime")
     val reservationDateTime: String? = null,
+    @SerializedName("endDateTime")
+    val endDateTime: String? = null,
     @SerializedName("status")
     val status: String? = null,
     @SerializedName("qrCode")
@@ -69,10 +95,31 @@ data class BookingDetailDto(
     @SerializedName("cancellationReason")
     val cancellationReason: String? = null,
     @SerializedName("canBeModified")
-    val canBeModified: Boolean? = null
+    val canBeModified: Boolean? = null,
+    @SerializedName("durationMinutes")
+    val durationMinutes: Int? = null,
+    @SerializedName("physicalSlot")
+    val physicalSlot: Int? = null,
+    @SerializedName("chargingStation")
+    val chargingStation: BookingStationSummaryDto? = null
 ) {
     // Helper to get ID as string
-    fun getIdString(): String = id ?: ""
+    fun getIdString(): String {
+        return when (id) {
+            is String -> id
+            is ObjectIdDto -> id.creationTime ?: id.timestamp?.toString().orEmpty()
+            is Map<*, *> -> {
+                val map = id as Map<*, *>
+                val creationTime = map["creationTime"] as? String
+                val timestamp = (map["timestamp"] as? Number)?.toLong()
+                creationTime ?: timestamp?.toString().orEmpty()
+            }
+            else -> {
+                Log.w("BookingDetailDto", "Unable to parse booking id from: $id")
+                ""
+            }
+        }
+    }
 
     // Helper to get station ID as string
     fun getStationIdString(): String = chargingStationId ?: ""
@@ -81,11 +128,33 @@ data class BookingDetailDto(
     fun getTimestamp(): Long = System.currentTimeMillis()
 
     // Helper to get station name
-    fun getStationName(): String = chargingStationName ?: ""
+    fun getStationName(): String = chargingStationName ?: chargingStation?.name.orEmpty()
 
     // Helper to get owner full name
     fun getOwnerFullName(): String = evOwnerFullName ?: "$evOwnerFirstName $evOwnerLastName".trim()
 }
+
+data class BookingStationSummaryDto(
+    @SerializedName("name")
+    val name: String? = null,
+    @SerializedName("pricePerHour")
+    val pricePerHour: Double? = null,
+    @SerializedName("stationCode")
+    val stationCode: String? = null,
+    @SerializedName("stationType")
+    val stationType: String? = null,
+    @SerializedName("location")
+    val location: BookingStationLocationDto? = null
+)
+
+data class BookingStationLocationDto(
+    @SerializedName("city")
+    val city: String? = null,
+    @SerializedName("latitude")
+    val latitude: Double? = null,
+    @SerializedName("longitude")
+    val longitude: Double? = null
+)
 
 data class CreateBookingRequest(
     @SerializedName("evOwnerNIC")

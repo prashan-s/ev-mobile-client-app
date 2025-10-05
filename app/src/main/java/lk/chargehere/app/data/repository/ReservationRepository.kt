@@ -10,9 +10,6 @@ import lk.chargehere.app.domain.model.Reservation
 import lk.chargehere.app.domain.model.ReservationStatus
 import lk.chargehere.app.utils.Result
 import lk.chargehere.app.utils.ErrorParser
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,7 +51,7 @@ class ReservationRepository @Inject constructor(
                     android.util.Log.d("ReservationRepository", "QR Code: ${bookingResponse.qrCode}")
 
                     // Refresh reservations after creating a new one
-                    getBookingsByEVOwner(evOwnerNIC)
+                    getMyReservations(evOwnerNIC)
                     Result.Success(bookingResponse)
                 } else {
                     android.util.Log.e("ReservationRepository", "Booking failed: No response data received")
@@ -99,48 +96,70 @@ class ReservationRepository @Inject constructor(
         }
     }
     
-    // Get bookings by EVOwner using GetBookingsByEVOwner
-    suspend fun getBookingsByEVOwner(evOwnerNIC: String): Result<List<Reservation>> {
+    // Convenience method for getting current user's reservations
+    // Note: Caller must provide NIC - typically from AuthManager.getCurrentUserNic()
+    suspend fun getMyReservations(evOwnerNIC: String): Result<List<Reservation>> {
         return try {
-            android.util.Log.d("ReservationRepository", "Fetching bookings from API for NIC: $evOwnerNIC")
-            android.util.Log.d("ReservationRepository", "API Call: GET /api/v1/bookings/evowner/$evOwnerNIC")
+            android.util.Log.d("ReservationRepository", "Fetching current user's bookings")
+            android.util.Log.d("ReservationRepository", "API Call: GET /api/v1/evowners/bookings")
 
-            val response = reservationApiService.getBookingsByEVOwner(evOwnerNIC)
+            val response = reservationApiService.getMyBookings()
 
             if (response.isSuccessful) {
-                val bookingDetails = response.body() ?: emptyList()
+                val bookingDetails = response.body().orEmpty()
                 android.util.Log.d("ReservationRepository", "Successfully loaded ${bookingDetails.size} bookings from API")
 
-                // Convert BookingDetailDto to ReservationEntity
-                val reservations = bookingDetails.map { it.toEntity() }
+                val reservationEntities = bookingDetails.map { dto ->
+                    val entity = dto.toEntity()
+                    if (entity.userId.isBlank()) entity.copy(userId = evOwnerNIC) else entity
+                }
+                val reservationIds = reservationEntities.map { it.reservationId }.toSet()
 
-                reservations.forEach { reservationDao.insertReservation(it) }
-                android.util.Log.d("ReservationRepository", "Saved ${reservations.size} reservations to database")
+                val existingReservations = reservationDao.getReservationsByUser(evOwnerNIC)
+                existingReservations
+                    .filterNot { reservationIds.contains(it.reservationId) }
+                    .forEach { stale ->
+                        reservationDao.deleteReservation(stale.reservationId)
+                    }
 
-                Result.Success(reservations.map { it.toDomain() })
+                reservationEntities.forEach { reservationDao.insertReservation(it) }
+                android.util.Log.d("ReservationRepository", "Saved ${reservationEntities.size} reservations to database")
+
+                val reservations = bookingDetails.map { dto ->
+                    val domain = dto.toDomain()
+                    if (domain.userId.isBlank()) domain.copy(userId = evOwnerNIC) else domain
+                }
+
+                Result.Success(reservations)
             } else {
-                android.util.Log.w("ReservationRepository", "API call failed with code: ${response.code()}, falling back to cached data")
+                android.util.Log.w(
+                    "ReservationRepository",
+                    "API call failed with code: ${response.code()}, falling back to cached data"
+                )
                 val errorBody = response.errorBody()?.string()
                 android.util.Log.w("ReservationRepository", "Error body: $errorBody")
-                // Return cached data if available
-                val cachedReservations = reservationDao.getAllReservations().map { it.toDomain() }
-                android.util.Log.d("ReservationRepository", "Returning ${cachedReservations.size} cached reservations")
+
+                val cachedReservations = reservationDao
+                    .getReservationsByUser(evOwnerNIC)
+                    .map { it.toDomain() }
+                android.util.Log.d(
+                    "ReservationRepository",
+                    "Returning ${cachedReservations.size} cached reservations"
+                )
                 Result.Success(cachedReservations)
             }
         } catch (e: Exception) {
             android.util.Log.e("ReservationRepository", "Network error: ${e.message}", e)
             e.printStackTrace()
-            // Return cached data on network error
-            val cachedReservations = reservationDao.getAllReservations().map { it.toDomain() }
-            android.util.Log.d("ReservationRepository", "Returning ${cachedReservations.size} cached reservations after network error")
+            val cachedReservations = reservationDao
+                .getReservationsByUser(evOwnerNIC)
+                .map { it.toDomain() }
+            android.util.Log.d(
+                "ReservationRepository",
+                "Returning ${cachedReservations.size} cached reservations after network error"
+            )
             Result.Success(cachedReservations)
         }
-    }
-    
-    // Convenience method for getting current user's reservations
-    // Note: Caller must provide NIC - typically from AuthManager.getCurrentUserNic()
-    suspend fun getMyReservations(evOwnerNIC: String): Result<List<Reservation>> {
-        return getBookingsByEVOwner(evOwnerNIC)
     }
     
     // Cancel booking using CancelBooking

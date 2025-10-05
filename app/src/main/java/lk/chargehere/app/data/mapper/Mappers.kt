@@ -4,6 +4,7 @@ import lk.chargehere.app.data.local.entities.*
 import lk.chargehere.app.data.remote.dto.*
 import lk.chargehere.app.domain.model.*
 import java.security.MessageDigest
+import java.util.UUID
 
 // User Mappers - Updated for new API structure
 fun UserDto.toEntity(): UserEntity {
@@ -120,61 +121,180 @@ fun Station.toEntity(): StationEntity {
 
 // Reservation Mappers - Updated for new API structure
 fun ReservationDto.toEntity(): ReservationEntity {
+    val resolvedReservationId = getReservationId().ifBlank {
+        listOfNotNull(
+            bookingNumber?.takeIf { it.isNotBlank() },
+            "$chargingStationId-$reservationDateTime"
+        ).firstOrNull { it.isNotBlank() } ?: UUID.randomUUID().toString()
+    }
+
+    val startTimestamp = parseISOToTimestamp(reservationDateTime)
+    val endTimestamp = parseISOToTimestampOrNull(endDateTime)
+        ?: durationMinutes?.let { startTimestamp + it * 60_000L }
+    val resolvedDuration = durationMinutes
+        ?: endTimestamp?.let { ((it - startTimestamp) / 60_000L).toInt().coerceAtLeast(1) }
+        ?: 60
+
+    val statusValue = (status ?: "PENDING").uppercase()
+
     return ReservationEntity(
-        reservationId = id ?: "",
+        reservationId = resolvedReservationId,
         stationId = chargingStationId,
         userId = evOwnerNIC,
-        status = status ?: "PENDING",
-        startTimestamp = parseISOToTimestamp(reservationDateTime),
-        durationMinutes = 60, // Default duration, can be updated
+        status = statusValue,
+        startTimestamp = startTimestamp,
+        durationMinutes = resolvedDuration,
+        endTimestamp = endTimestamp,
+        physicalSlot = physicalSlot,
+        bookingNumber = bookingNumber,
         qrPayload = null, // QR payload will be generated locally
         stationName = station?.name,
+        stationCode = station?.stationCode,
+        pricePerHour = station?.pricePerHour,
+        stationType = station?.stationType?.uppercase(),
+        stationCity = station?.location?.city,
+        stationLatitude = station?.location?.latitude,
+        stationLongitude = station?.location?.longitude,
+        reservationIso = reservationDateTime,
+        bookingDateIso = creationTime,
+        evOwnerName = null,
+        cancellationReason = cancellationReason,
+        cancelledBy = null,
+        cancelledByRole = null,
+        cancelledAt = null,
+        canBeModified = null,
         createdAt = timestamp ?: System.currentTimeMillis()
     )
 }
 
 // BookingDetailDto Mappers - For detailed booking responses
 fun BookingDetailDto.toEntity(): ReservationEntity {
+    val resolvedReservationId = getIdString().ifBlank {
+        listOfNotNull(
+            bookingNumber?.takeIf { it.isNotBlank() },
+            getStationIdString().takeIf { it.isNotBlank() }?.let { "$it-${reservationDateTime ?: createdDate}" }
+        ).firstOrNull { it.isNotBlank() } ?: UUID.randomUUID().toString()
+    }
+
+    val startTimestamp = parseISOToTimestamp(reservationDateTime ?: "")
+    val endTimestamp = parseISOToTimestampOrNull(endDateTime)
+        ?: durationMinutes?.let { startTimestamp + it * 60_000L }
+    val resolvedDuration = durationMinutes
+        ?: endTimestamp?.let { ((it - startTimestamp) / 60_000L).toInt().coerceAtLeast(1) }
+        ?: 60
+
+    val stationSummary = chargingStation
+
+    val statusValue = (status ?: "pending").uppercase()
+
     return ReservationEntity(
-        reservationId = getIdString(),
+        reservationId = resolvedReservationId,
         stationId = getStationIdString(),
         userId = evOwnerNIC ?: "",
-        status = status ?: "pending",
-        startTimestamp = parseISOToTimestamp(reservationDateTime ?: ""),
-        durationMinutes = 60, // Default duration - TODO: Get from API when available
+        status = statusValue,
+        startTimestamp = startTimestamp,
+        durationMinutes = resolvedDuration,
+        endTimestamp = endTimestamp,
+        physicalSlot = physicalSlot,
+        bookingNumber = bookingNumber,
         qrPayload = qrCode ?: bookingNumber, // Use QR code if available, otherwise booking number
         stationName = getStationName(), // Use helper method to get station name
-        createdAt = parseISOToTimestamp(createdDate ?: "")
+        stationCode = stationSummary?.stationCode ?: stationCode,
+        pricePerHour = stationSummary?.pricePerHour,
+        stationType = stationSummary?.stationType?.uppercase(),
+        stationCity = stationSummary?.location?.city,
+        stationLatitude = stationSummary?.location?.latitude,
+        stationLongitude = stationSummary?.location?.longitude,
+        reservationIso = reservationDateTime,
+        bookingDateIso = bookingDate,
+        evOwnerName = getOwnerFullName().takeIf { it.isNotBlank() },
+        cancellationReason = cancellationReason,
+        cancelledBy = listOfNotNull(cancelledByName, cancelledBy).firstOrNull { it.isNotBlank() },
+        cancelledByRole = cancelledByRole,
+        cancelledAt = parseISOToTimestampOrNull(cancelledDate),
+        canBeModified = canBeModified,
+        createdAt = parseISOToTimestamp(createdDate ?: bookingDate ?: ""),
+        updatedAt = parseISOToTimestamp(updatedDate ?: cancelledDate ?: createdDate ?: "")
     )
 }
 
 fun BookingDetailDto.toDomain(): Reservation {
+    val resolvedReservationId = getIdString().ifBlank {
+        listOfNotNull(
+            bookingNumber?.takeIf { it.isNotBlank() },
+            getStationIdString().takeIf { it.isNotBlank() }?.let { "$it-${reservationDateTime ?: createdDate}" }
+        ).firstOrNull { it.isNotBlank() } ?: UUID.randomUUID().toString()
+    }
+
+    val startTimestamp = parseISOToTimestamp(reservationDateTime ?: "")
+    val endTimestamp = parseISOToTimestampOrNull(endDateTime)
+        ?: durationMinutes?.let { startTimestamp + it * 60_000L }
+    val resolvedDuration = durationMinutes
+        ?: endTimestamp?.let { ((it - startTimestamp) / 60_000L).toInt().coerceAtLeast(1) }
+        ?: 60
+
+    val stationSummary = chargingStation
+
+    val statusValue = (status ?: "pending").uppercase()
+
     return Reservation(
-        id = getIdString(),
+        id = resolvedReservationId,
         bookingNumber = bookingNumber,
         stationId = getStationIdString(),
         userId = evOwnerNIC ?: "",
-        status = status ?: "pending",
-        startTime = parseISOToTimestamp(reservationDateTime ?: ""),
-        durationMinutes = 60, // Default duration - TODO: Get from API when available
-        qrPayload = qrCode ?: bookingNumber ?: "",
-        stationName = chargingStationName ?: "", // Use chargingStationName field
-        createdAt = parseISOToTimestamp(createdDate ?: ""),
-        updatedAt = parseISOToTimestamp(updatedDate ?: createdDate ?: "")
+        status = statusValue,
+        startTime = startTimestamp,
+        durationMinutes = resolvedDuration,
+        endTime = endTimestamp,
+        physicalSlot = physicalSlot,
+        qrPayload = qrCode ?: bookingNumber,
+        stationName = getStationName(),
+        stationCode = stationSummary?.stationCode ?: stationCode,
+        pricePerHour = stationSummary?.pricePerHour,
+        stationType = stationSummary?.stationType?.uppercase(),
+        stationCity = stationSummary?.location?.city,
+        stationLatitude = stationSummary?.location?.latitude,
+        stationLongitude = stationSummary?.location?.longitude,
+        reservationIso = reservationDateTime,
+        bookingDateIso = bookingDate ?: createdDate,
+        evOwnerName = getOwnerFullName().takeIf { it.isNotBlank() },
+        cancellationReason = cancellationReason,
+        cancelledBy = listOfNotNull(cancelledByName, cancelledBy).firstOrNull { it.isNotBlank() },
+        cancelledByRole = cancelledByRole,
+        cancelledAt = parseISOToTimestampOrNull(cancelledDate),
+        canBeModified = canBeModified ?: true,
+        createdAt = parseISOToTimestamp(createdDate ?: bookingDate ?: ""),
+        updatedAt = parseISOToTimestamp(updatedDate ?: cancelledDate ?: createdDate ?: "")
     )
 }
 
 fun ReservationEntity.toDomain(): Reservation {
     return Reservation(
         id = reservationId,
-        bookingNumber = null, // Not stored in entity
+        bookingNumber = bookingNumber,
         stationId = stationId,
         userId = userId,
         status = status,
         startTime = startTimestamp,
         durationMinutes = durationMinutes,
-        qrPayload = qrPayload ?: "",
+        endTime = endTimestamp,
+        physicalSlot = physicalSlot,
+        qrPayload = qrPayload ?: bookingNumber,
         stationName = stationName ?: "",
+        stationCode = stationCode,
+        pricePerHour = pricePerHour,
+        stationType = stationType,
+        stationCity = stationCity,
+        stationLatitude = stationLatitude,
+        stationLongitude = stationLongitude,
+        reservationIso = reservationIso,
+        bookingDateIso = bookingDateIso,
+        evOwnerName = evOwnerName,
+        cancellationReason = cancellationReason,
+        cancelledBy = cancelledBy,
+        cancelledByRole = cancelledByRole,
+        cancelledAt = cancelledAt,
+        canBeModified = canBeModified ?: true,
         createdAt = createdAt,
         updatedAt = updatedAt
     )
@@ -185,11 +305,28 @@ fun Reservation.toEntity(): ReservationEntity {
         reservationId = id,
         stationId = stationId,
         userId = userId,
-        status = status,
+        status = status.uppercase(),
         startTimestamp = startTime,
         durationMinutes = durationMinutes,
+        endTimestamp = endTime,
+        physicalSlot = physicalSlot,
+        bookingNumber = bookingNumber,
         qrPayload = qrPayload,
         stationName = stationName,
+        stationCode = stationCode,
+        pricePerHour = pricePerHour,
+        stationType = stationType,
+        stationCity = stationCity,
+        stationLatitude = stationLatitude,
+        stationLongitude = stationLongitude,
+        reservationIso = reservationIso,
+        bookingDateIso = bookingDateIso,
+        evOwnerName = evOwnerName,
+        cancellationReason = cancellationReason,
+        cancelledBy = cancelledBy,
+        cancelledByRole = cancelledByRole,
+        cancelledAt = cancelledAt,
+        canBeModified = canBeModified,
         createdAt = createdAt,
         updatedAt = updatedAt
     )
@@ -209,6 +346,22 @@ private fun parseISOToTimestamp(isoString: String): Long {
             java.time.LocalDateTime.parse(isoString).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
         } catch (e2: Exception) {
             System.currentTimeMillis()
+        }
+    }
+}
+
+private fun parseISOToTimestampOrNull(isoString: String?): Long? {
+    if (isoString.isNullOrBlank()) {
+        return null
+    }
+
+    return try {
+        java.time.Instant.parse(isoString).toEpochMilli()
+    } catch (e: Exception) {
+        try {
+            java.time.LocalDateTime.parse(isoString).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        } catch (e2: Exception) {
+            null
         }
     }
 }

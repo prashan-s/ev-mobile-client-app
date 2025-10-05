@@ -14,7 +14,7 @@ import lk.chargehere.app.data.local.entities.*
         ReservationEntity::class,
         OperatorSessionEntity::class
     ],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 abstract class ChargeHereDatabase : RoomDatabase() {

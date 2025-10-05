@@ -14,9 +14,9 @@ interface ReservationApiService {
     @GET("/api/v1/bookings/{id}")
     suspend fun getBookingById(@Path("id") bookingId: String): Response<BookingDetailDto>
     
-    // Get Bookings by EVOwner - GET /api/v1/bookings/evowner/{evOwnerNIC}
-    @GET("/api/v1/bookings/evowner/{evOwnerNIC}")
-    suspend fun getBookingsByEVOwner(@Path("evOwnerNIC") evOwnerNIC: String): Response<List<BookingDetailDto>>
+    // Get Bookings for current EV owner - GET /api/v1/evowners/bookings
+    @GET("/api/v1/evowners/bookings")
+    suspend fun getMyBookings(): Response<List<BookingDetailDto>>
     
     // Cancel Booking - POST /api/v1/bookings/{id}/cancel
     @POST("/api/v1/bookings/{id}/cancel")

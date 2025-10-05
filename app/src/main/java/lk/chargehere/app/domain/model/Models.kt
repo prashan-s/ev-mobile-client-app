@@ -53,6 +53,22 @@ data class Reservation(
     val durationMinutes: Int,
     val qrPayload: String? = null,
     val stationName: String = "", // Made non-nullable with default
+    val stationCode: String? = null,
+    val endTime: Long? = null,
+    val physicalSlot: Int? = null,
+    val pricePerHour: Double? = null,
+    val stationType: String? = null,
+    val stationCity: String? = null,
+    val stationLatitude: Double? = null,
+    val stationLongitude: Double? = null,
+    val reservationIso: String? = null,
+    val bookingDateIso: String? = null,
+    val evOwnerName: String? = null,
+    val cancellationReason: String? = null,
+    val cancelledBy: String? = null,
+    val cancelledByRole: String? = null,
+    val cancelledAt: Long? = null,
+    val canBeModified: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

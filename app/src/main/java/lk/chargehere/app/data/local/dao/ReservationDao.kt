@@ -19,7 +19,7 @@ interface ReservationDao {
     @Query("SELECT * FROM reservations WHERE reservation_id = :reservationId")
     suspend fun getReservationById(reservationId: String): ReservationEntity?
     
-    @Query("SELECT * FROM reservations WHERE user_id = :userId AND status IN ('PENDING', 'APPROVED') ORDER BY start_timestamp ASC")
+    @Query("SELECT * FROM reservations WHERE user_id = :userId AND status IN ('PENDING', 'APPROVED', 'CONFIRMED', 'IN_PROGRESS') ORDER BY start_timestamp ASC")
     suspend fun getUpcomingReservations(userId: String): List<ReservationEntity>
     
     @Query("SELECT * FROM reservations WHERE user_id = :userId AND status IN ('COMPLETED', 'CANCELLED') ORDER BY start_timestamp DESC")

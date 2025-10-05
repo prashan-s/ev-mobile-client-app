@@ -75,7 +75,7 @@ class ProfileViewModel @Inject constructor(
             when (val reservationsResult = reservationRepository.getMyReservations(nic)) {
                 is Result.Success -> {
                     val reservations = reservationsResult.data
-                    val completedCount = reservations.count { it.status == "COMPLETED" }
+                    val completedCount = reservations.count { it.status.equals("COMPLETED", ignoreCase = true) }
                     
                     _uiState.value = _uiState.value.copy(
                         totalReservations = reservations.size,
