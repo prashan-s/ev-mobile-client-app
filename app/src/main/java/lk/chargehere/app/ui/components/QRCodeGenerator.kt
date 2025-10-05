@@ -1,14 +1,16 @@
 package lk.chargehere.app.ui.components
 
-import androidx.compose.foundation.Canvas
+import android.graphics.Bitmap
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.google.zxing.BarcodeFormat
@@ -23,67 +25,59 @@ fun QRCodeGenerator(
     foregroundColor: Color = Color.Black,
     backgroundColor: Color = Color.White
 ) {
-    val density = LocalDensity.current
-    
-    val qrCodeBitmap by remember(content) {
-        derivedStateOf {
+    var qrBitmap by remember(content) { mutableStateOf<Bitmap?>(null) }
+
+    // Generate QR code bitmap in a background coroutine to avoid blocking UI
+    LaunchedEffect(content, foregroundColor, backgroundColor) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             try {
                 val writer = QRCodeWriter()
                 val hints = hashMapOf<EncodeHintType, Any>().apply {
                     put(EncodeHintType.MARGIN, 1)
                 }
-                
-                val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, 512, 512, hints)
-                bitMatrix
+
+                // Generate QR code with smaller size for better performance
+                val size = 256
+                val bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, size, size, hints)
+
+                // Convert BitMatrix to Bitmap in background thread
+                val width = bitMatrix.width
+                val height = bitMatrix.height
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+
+                val foregroundArgb = foregroundColor.toArgb()
+                val backgroundArgb = backgroundColor.toArgb()
+
+                // Create pixel array
+                val pixels = IntArray(width * height)
+                for (y in 0 until height) {
+                    val offset = y * width
+                    for (x in 0 until width) {
+                        pixels[offset + x] = if (bitMatrix[x, y]) foregroundArgb else backgroundArgb
+                    }
+                }
+
+                bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+                qrBitmap = bitmap
             } catch (e: Exception) {
-                null
+                android.util.Log.e("QRCodeGenerator", "Error generating QR code", e)
+                qrBitmap = null
             }
         }
     }
 
-    Canvas(
+    Box(
         modifier = modifier
             .background(backgroundColor)
             .aspectRatio(1f)
     ) {
-        qrCodeBitmap?.let { bitMatrix ->
-            drawQRCode(
-                bitMatrix = bitMatrix,
-                foregroundColor = foregroundColor,
-                backgroundColor = backgroundColor
+        qrBitmap?.let { bitmap ->
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "QR Code",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
             )
-        }
-    }
-}
-
-private fun DrawScope.drawQRCode(
-    bitMatrix: BitMatrix,
-    foregroundColor: Color,
-    backgroundColor: Color
-) {
-    val width = bitMatrix.width
-    val height = bitMatrix.height
-    val cellSize = size.width / width.coerceAtLeast(height)
-
-    // Draw background
-    drawRect(
-        color = backgroundColor,
-        size = size
-    )
-
-    // Draw QR code pixels
-    for (x in 0 until width) {
-        for (y in 0 until height) {
-            if (bitMatrix[x, y]) {
-                drawRect(
-                    color = foregroundColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(
-                        x = x * cellSize,
-                        y = y * cellSize
-                    ),
-                    size = androidx.compose.ui.geometry.Size(cellSize, cellSize)
-                )
-            }
         }
     }
 }

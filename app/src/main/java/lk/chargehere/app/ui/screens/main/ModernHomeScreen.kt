@@ -107,12 +107,15 @@ fun ModernHomeScreen(
                     cameraPositionState = cameraPositionState,
                     properties = MapProperties(
                         isMyLocationEnabled = hasLocationPermission,
-                        mapStyleOptions = null
+                        isTrafficEnabled = false
                     ),
                     uiSettings = MapUiSettings(
                         zoomControlsEnabled = false,
                         myLocationButtonEnabled = hasLocationPermission,
-                        mapToolbarEnabled = false
+                        mapToolbarEnabled = false,
+                        compassEnabled = false,
+                        indoorLevelPickerEnabled = false,
+                        tiltGesturesEnabled = false
                     )
                 ) {
                     // Add custom markers for charging stations

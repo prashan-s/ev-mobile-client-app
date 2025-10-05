@@ -361,7 +361,7 @@ private fun ClarityUpcomingReservationItem(
         reservation.physicalSlot?.let { "Slot $it" }
     ).joinToString(" • ")
     val statusUpper = reservation.status.uppercase()
-    val canCancel = reservation.canBeModified && statusUpper in setOf("PENDING", "CONFIRMED")
+    val canCancel = reservation.canBeModified && statusUpper in setOf("PENDING", "CONFIRMED", "APPROVED")
 
     ClarityCard(
         modifier = Modifier
@@ -383,12 +383,14 @@ private fun ClarityUpcomingReservationItem(
                 
                 ClarityStatusChip(
                     text = when (reservation.status.lowercase()) {
+                        "approved" -> "Active"
                         "confirmed" -> "Confirmed"
-                        "in_progress" -> "Active"
+                        "in_progress" -> "In Progress"
                         "pending" -> "Pending"
                         else -> "Pending"
                     },
                     status = when (reservation.status.lowercase()) {
+                        "approved" -> ClarityStatus.Success
                         "confirmed" -> ClarityStatus.Success
                         "in_progress" -> ClarityStatus.Warning
                         "pending" -> ClarityStatus.Neutral

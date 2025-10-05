@@ -342,7 +342,7 @@ private fun ClarityReservationDetailContent(
         Spacer(modifier = Modifier.height(ClaritySpacing.lg))
 
         // QR Code Section (only for active bookings)
-        if (statusLower == "confirmed" || statusLower == "in_progress") {
+        if (statusLower == "confirmed" || statusLower == "in_progress" || statusLower == "approved") {
             val qrContent = reservation.qrPayload?.takeIf { it.isNotBlank() }
                 ?: reservation.bookingNumber?.takeIf { it.isNotBlank() }
                 ?: reservation.id
@@ -356,9 +356,9 @@ private fun ClarityReservationDetailContent(
         }
 
         // Action Buttons
-        if (statusLower in listOf("confirmed", "in_progress", "pending")) {
+        if (statusLower in listOf("confirmed", "in_progress", "pending", "approved")) {
             ModernActionButtons(
-                canCancel = (statusLower == "pending" || statusLower == "confirmed") && reservation.canBeModified,
+                canCancel = (statusLower == "pending" || statusLower == "confirmed" || statusLower == "approved") && reservation.canBeModified,
                 onGetDirections = { /* Open maps */ },
                 onCancelReservation = onCancelReservation
             )
@@ -439,13 +439,15 @@ private fun ModernStatusHeroCard(
 
                 ClarityStatusChip(
                     text = when (reservation.status.lowercase()) {
+                        "approved" -> "Active"
                         "confirmed" -> "Confirmed"
-                        "in_progress" -> "Active"
+                        "in_progress" -> "In Progress"
                         "completed" -> "Completed"
                         "cancelled" -> "Cancelled"
                         else -> "Pending"
                     },
                     status = when (reservation.status.lowercase()) {
+                        "approved" -> ClarityStatus.Success
                         "confirmed" -> ClarityStatus.Success
                         "in_progress" -> ClarityStatus.Warning
                         "completed" -> ClarityStatus.Success
