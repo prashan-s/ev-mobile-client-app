@@ -26,14 +26,23 @@ class ReservationRepository @Inject constructor(
     suspend fun createBooking(
         evOwnerNIC: String,
         chargingStationId: String,
-        reservationDateTime: String
+        reservationDateTime: String,
+        durationMinutes: Int = 60,
+        physicalSlot: Int = 1
     ): Result<CreateBookingResponse> {
         return try {
             android.util.Log.d("ReservationRepository", "Creating booking for NIC: $evOwnerNIC, Station: $chargingStationId")
             android.util.Log.d("ReservationRepository", "Reservation time: $reservationDateTime")
+            android.util.Log.d("ReservationRepository", "Duration: $durationMinutes minutes, Physical Slot: $physicalSlot")
             android.util.Log.d("ReservationRepository", "API Call: POST /api/v1/bookings")
 
-            val request = CreateBookingRequest(evOwnerNIC, chargingStationId, reservationDateTime)
+            val request = CreateBookingRequest(
+                evOwnerNIC = evOwnerNIC,
+                chargingStationId = chargingStationId,
+                reservationDateTime = reservationDateTime,
+                physicalSlot = physicalSlot,
+                durationMinutes = durationMinutes
+            )
             val response = reservationApiService.createBooking(request)
 
             if (response.isSuccessful) {
@@ -43,7 +52,7 @@ class ReservationRepository @Inject constructor(
                     android.util.Log.d("ReservationRepository", "Booking Number: ${bookingResponse.bookingNumber}")
                     android.util.Log.d("ReservationRepository", "Status: ${bookingResponse.status}")
                     android.util.Log.d("ReservationRepository", "QR Code: ${bookingResponse.qrCode}")
-                    
+
                     // Refresh reservations after creating a new one
                     getBookingsByEVOwner(evOwnerNIC)
                     Result.Success(bookingResponse)

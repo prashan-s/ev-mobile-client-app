@@ -141,7 +141,7 @@ fun BookingDetailDto.toEntity(): ReservationEntity {
         userId = evOwnerNIC ?: "",
         status = status ?: "pending",
         startTimestamp = parseISOToTimestamp(reservationDateTime ?: ""),
-        durationMinutes = 60, // Default duration
+        durationMinutes = 60, // Default duration - TODO: Get from API when available
         qrPayload = qrCode ?: bookingNumber, // Use QR code if available, otherwise booking number
         stationName = getStationName(), // Use helper method to get station name
         createdAt = parseISOToTimestamp(createdDate ?: "")
@@ -156,9 +156,9 @@ fun BookingDetailDto.toDomain(): Reservation {
         userId = evOwnerNIC ?: "",
         status = status ?: "pending",
         startTime = parseISOToTimestamp(reservationDateTime ?: ""),
-        durationMinutes = 60, // Default duration
+        durationMinutes = 60, // Default duration - TODO: Get from API when available
         qrPayload = qrCode ?: bookingNumber ?: "",
-        stationName = getStationName(), // Use helper method to get station name
+        stationName = chargingStationName ?: "", // Use chargingStationName field
         createdAt = parseISOToTimestamp(createdDate ?: ""),
         updatedAt = parseISOToTimestamp(updatedDate ?: createdDate ?: "")
     )

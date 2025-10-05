@@ -540,3 +540,241 @@ fun ClarityErrorBanner(
         }
     }
 }
+
+/**
+ * Duration selector with preset options and custom slider
+ */
+@Composable
+fun ClarityDurationSelector(
+    selectedDurationMinutes: Int,
+    onDurationSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    minDuration: Int = 15,
+    maxDuration: Int = 240
+) {
+    val presetDurations = listOf(15, 30, 60, 120, 180, 240)
+
+    Column(modifier = modifier) {
+        // Preset duration chips
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            presetDurations.take(4).forEach { duration ->
+                val isSelected = selectedDurationMinutes == duration
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isSelected) ClarityAccentBlue else ClarityPureWhite
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (isSelected) ClarityAccentBlue else ClarityLightGray,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .clickable { onDurationSelected(duration) }
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "${duration}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (isSelected) ClarityPureWhite else ClarityDarkGray,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "min",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isSelected) ClarityPureWhite else ClarityMediumGray
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Custom slider for fine-tuning
+        Column {
+            Text(
+                text = "Custom duration",
+                style = MaterialTheme.typography.labelMedium,
+                color = ClarityMediumGray
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Slider(
+                value = selectedDurationMinutes.toFloat(),
+                onValueChange = { onDurationSelected(it.toInt()) },
+                valueRange = minDuration.toFloat()..maxDuration.toFloat(),
+                steps = (maxDuration - minDuration) / 15 - 1,
+                colors = SliderDefaults.colors(
+                    thumbColor = ClarityAccentBlue,
+                    activeTrackColor = ClarityAccentBlue,
+                    inactiveTrackColor = ClarityLightGray
+                )
+            )
+            Text(
+                text = "${selectedDurationMinutes} minutes",
+                style = MaterialTheme.typography.bodyMedium,
+                color = ClarityDarkGray,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        }
+    }
+}
+
+/**
+ * Physical slot selector with visual grid
+ */
+@Composable
+fun ClaritySlotSelector(
+    totalSlots: Int,
+    availableSlots: Int,
+    selectedSlot: Int,
+    onSlotSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = "Select Charging Slot",
+            style = MaterialTheme.typography.titleMedium,
+            color = ClarityDarkGray,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "$availableSlots of $totalSlots slots available",
+            style = MaterialTheme.typography.bodyMedium,
+            color = ClarityMediumGray
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Grid of slots (2 columns)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            for (row in 0 until (totalSlots + 1) / 2) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (col in 0..1) {
+                        val slotNumber = row * 2 + col + 1
+                        if (slotNumber <= totalSlots) {
+                            val isAvailable = slotNumber <= availableSlots
+                            val isSelected = slotNumber == selectedSlot
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(64.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        when {
+                                            isSelected -> ClarityAccentBlue
+                                            isAvailable -> ClarityPureWhite
+                                            else -> ClarityLightGray
+                                        }
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = when {
+                                            isSelected -> ClarityAccentBlue
+                                            isAvailable -> ClarityLightGray
+                                            else -> ClarityMediumGray.copy(alpha = 0.3f)
+                                        },
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .clickable(enabled = isAvailable) {
+                                        onSlotSelected(slotNumber)
+                                    }
+                                    .padding(12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Slot $slotNumber",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = when {
+                                            isSelected -> ClarityPureWhite
+                                            isAvailable -> ClarityDarkGray
+                                            else -> ClarityMediumGray
+                                        },
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = if (isAvailable) "Available" else "Occupied",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = when {
+                                            isSelected -> ClarityPureWhite.copy(alpha = 0.9f)
+                                            isAvailable -> ClaritySuccessGreen
+                                            else -> ClarityErrorRed
+                                        }
+                                    )
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Step indicator for multi-step flows
+ */
+@Composable
+fun ClarityStepIndicator(
+    currentStep: Int,
+    totalSteps: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        for (step in 1..totalSteps) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(
+                        if (step <= currentStep) ClarityAccentBlue else ClarityLightGray
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = step.toString(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (step <= currentStep) ClarityPureWhite else ClarityMediumGray,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (step < totalSteps) {
+                Box(
+                    modifier = Modifier
+                        .width(32.dp)
+                        .height(2.dp)
+                        .background(
+                            if (step < currentStep) ClarityAccentBlue else ClarityLightGray
+                        )
+                )
+            }
+        }
+    }
+}
