@@ -74,7 +74,7 @@ class ReservationDetailViewModel @Inject constructor(
         }
     }
 
-    fun cancelReservation(reservationId: String, reason: String = "User Cancelled") {
+    fun cancelReservation(reservationId: String, reason: String = "Cancelled by the User.") {
         viewModelScope.launch {
             android.util.Log.d("ReservationDetailViewModel", "Cancelling reservation: $reservationId")
             _uiState.value = _uiState.value.copy(

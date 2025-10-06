@@ -118,9 +118,11 @@ fun ModernReservationsScreen(
         if (showCancelDialog && reservationToCancel != null) {
             ClarityCancelReservationDialog(
                 isLoading = uiState.isCancellationInProgress,
+                errorMessage = uiState.error,
                 onDismiss = {
                     showCancelDialog = false
                     reservationToCancel = null
+                    viewModel.clearError()
                 },
                 onConfirm = {
                     reservationToCancel?.let { viewModel.cancelReservation(it) }
@@ -567,6 +569,7 @@ private fun ClarityPastReservationItem(
 @Composable
 private fun ClarityCancelReservationDialog(
     isLoading: Boolean = false,
+    errorMessage: String? = null,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -592,6 +595,15 @@ private fun ClarityCancelReservationDialog(
                 color = ClarityMediumGray,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
+
+            if (!errorMessage.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(ClaritySpacing.sm))
+
+                ClarityFormattedError(
+                    errorMessage = errorMessage,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             
             Spacer(modifier = Modifier.height(ClaritySpacing.lg))
             

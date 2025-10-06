@@ -122,7 +122,9 @@ class ReservationsViewModel @Inject constructor(
                 cancellationSuccess = false
             )
             
-            when (val result = reservationRepository.cancelReservation(reservationId, reason)) {
+            val cancellationReason = reason ?: "Cancelled by the User."
+
+            when (val result = reservationRepository.cancelReservation(reservationId, cancellationReason)) {
                 is Result.Success -> {
                     android.util.Log.d("ReservationsViewModel", "Successfully cancelled reservation: $reservationId")
                     _uiState.value = _uiState.value.copy(

@@ -33,22 +33,7 @@ data class ReservationDto(
     val station: StationDto? = null
 )
 
-fun ReservationDto.getReservationId(): String {
-    return when (id) {
-        is String -> id
-        is ObjectIdDto -> id.creationTime ?: id.timestamp?.toString().orEmpty()
-        is Map<*, *> -> {
-            val map = id as Map<*, *>
-            val creationTime = map["creationTime"] as? String
-            val timestamp = (map["timestamp"] as? Number)?.toLong()
-            creationTime ?: timestamp?.toString().orEmpty()
-        }
-        else -> {
-            Log.w("ReservationDto", "Unable to parse reservation id from: $id")
-            ""
-        }
-    }
-}
+fun ReservationDto.getReservationId(): String = id.extractReservationId("ReservationDto")
 
 // Detailed booking response from GetBookingById
 data class BookingDetailDto(
@@ -104,22 +89,7 @@ data class BookingDetailDto(
     val chargingStation: BookingStationSummaryDto? = null
 ) {
     // Helper to get ID as string
-    fun getIdString(): String {
-        return when (id) {
-            is String -> id
-            is ObjectIdDto -> id.creationTime ?: id.timestamp?.toString().orEmpty()
-            is Map<*, *> -> {
-                val map = id as Map<*, *>
-                val creationTime = map["creationTime"] as? String
-                val timestamp = (map["timestamp"] as? Number)?.toLong()
-                creationTime ?: timestamp?.toString().orEmpty()
-            }
-            else -> {
-                Log.w("BookingDetailDto", "Unable to parse booking id from: $id")
-                ""
-            }
-        }
-    }
+    fun getIdString(): String = id.extractReservationId("BookingDetailDto")
 
     // Helper to get station ID as string
     fun getStationIdString(): String = chargingStationId ?: ""
@@ -231,6 +201,34 @@ data class CancelBookingRequest(
     @SerializedName("cancellationReason")
     val cancellationReason: String?
 )
+
+private fun Any?.extractReservationId(tag: String): String {
+    return when (this) {
+        is String -> this
+        is ObjectIdDto -> this.creationTime ?: this.timestamp?.toString().orEmpty()
+        is Map<*, *> -> {
+            val map = this
+            val directOid = (map["${'$'}oid"] as? String)
+                ?: (map["oid"] as? String)
+                ?: ((map["_id"] as? Map<*, *>)?.get("${'$'}oid") as? String)
+                ?: (map["value"] as? String)
+                ?: (map["id"] as? String)
+                ?: (map["creationTime"] as? String)
+                ?: (map["timestamp"] as? Number)?.toLong()?.toString()
+
+            if (!directOid.isNullOrBlank()) {
+                directOid
+            } else {
+                Log.w(tag, "Unable to parse reservation id from map: $this")
+                ""
+            }
+        }
+        else -> {
+            Log.w(tag, "Unable to parse reservation id from: $this")
+            ""
+        }
+    }
+}
 
 // Paginated response for getAllBookings
 data class PaginatedBookingsResponse(
