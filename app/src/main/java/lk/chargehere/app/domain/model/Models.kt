@@ -61,6 +61,7 @@ data class Reservation(
     val stationCity: String? = null,
     val stationLatitude: Double? = null,
     val stationLongitude: Double? = null,
+    val station: ReservationStation? = null, // Full station object from booking detail
     val reservationIso: String? = null,
     val bookingDateIso: String? = null,
     val evOwnerName: String? = null,
@@ -71,6 +72,20 @@ data class Reservation(
     val canBeModified: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
+)
+
+data class ReservationStation(
+    val name: String,
+    val pricePerHour: Double? = null,
+    val stationCode: String? = null,
+    val stationType: String? = null,
+    val location: StationLocation? = null
+)
+
+data class StationLocation(
+    val city: String? = null,
+    val latitude: Double,
+    val longitude: Double
 )
 
 enum class ReservationStatus {

@@ -255,6 +255,7 @@ fun BookingDetailDto.toDomain(): Reservation {
         stationCity = stationSummary?.location?.city,
         stationLatitude = stationSummary?.location?.latitude,
         stationLongitude = stationSummary?.location?.longitude,
+        station = stationSummary?.toDomain(),
         reservationIso = reservationDateTime,
         bookingDateIso = bookingDate ?: createdDate,
         evOwnerName = getOwnerFullName().takeIf { it.isNotBlank() },
@@ -269,6 +270,21 @@ fun BookingDetailDto.toDomain(): Reservation {
 }
 
 fun ReservationEntity.toDomain(): Reservation {
+    // Reconstruct station object if we have location data
+    val stationObj = if (stationLatitude != null && stationLongitude != null) {
+        ReservationStation(
+            name = stationName ?: "",
+            pricePerHour = pricePerHour,
+            stationCode = stationCode,
+            stationType = stationType,
+            location = StationLocation(
+                city = stationCity,
+                latitude = stationLatitude,
+                longitude = stationLongitude
+            )
+        )
+    } else null
+
     return Reservation(
         id = reservationId,
         bookingNumber = bookingNumber,
@@ -287,6 +303,7 @@ fun ReservationEntity.toDomain(): Reservation {
         stationCity = stationCity,
         stationLatitude = stationLatitude,
         stationLongitude = stationLongitude,
+        station = stationObj,
         reservationIso = reservationIso,
         bookingDateIso = bookingDateIso,
         evOwnerName = evOwnerName,
@@ -411,5 +428,24 @@ fun OperatingHourDto.toDomain(): OperatingHour {
         startTime = startTime,
         endTime = endTime,
         isOpen = isOpen
+    )
+}
+
+// Booking Station Summary Mappers
+fun BookingStationSummaryDto.toDomain(): ReservationStation {
+    return ReservationStation(
+        name = name ?: "",
+        pricePerHour = pricePerHour,
+        stationCode = stationCode,
+        stationType = stationType?.uppercase(),
+        location = location?.toDomain()
+    )
+}
+
+fun BookingStationLocationDto.toDomain(): StationLocation {
+    return StationLocation(
+        city = city,
+        latitude = latitude ?: 0.0,
+        longitude = longitude ?: 0.0
     )
 }

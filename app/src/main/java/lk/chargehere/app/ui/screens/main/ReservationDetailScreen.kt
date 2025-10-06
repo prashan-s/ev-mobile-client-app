@@ -20,6 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import lk.chargehere.app.domain.model.Reservation
 import lk.chargehere.app.ui.viewmodel.ReservationDetailViewModel
 import lk.chargehere.app.ui.components.QRCodeGenerator
@@ -80,7 +83,8 @@ fun ReservationDetailScreen(
                     uiState.reservation != null -> {
                         ClarityReservationDetailContent(
                             reservation = uiState.reservation!!,
-                            onCancelReservation = { showCancelDialog = true }
+                            onCancelReservation = { showCancelDialog = true },
+                            context = context
                         )
                     }
                 }
@@ -205,7 +209,8 @@ private fun ClarityDetailErrorState(
 @Composable
 private fun ClarityReservationDetailContent(
     reservation: Reservation,
-    onCancelReservation: () -> Unit
+    onCancelReservation: () -> Unit,
+    context: android.content.Context
 ) {
     val startDateTime = LocalDateTime.ofInstant(
         Instant.ofEpochMilli(reservation.startTime),
@@ -359,7 +364,19 @@ private fun ClarityReservationDetailContent(
         if (statusLower in listOf("confirmed", "in_progress", "pending", "approved")) {
             ModernActionButtons(
                 canCancel = (statusLower == "pending" || statusLower == "confirmed" || statusLower == "approved") && reservation.canBeModified,
-                onGetDirections = { /* Open maps */ },
+                onGetDirections = {
+                    // Use coordinates from station object (from chargingStation in API)
+                    val latitude = reservation.station?.location?.latitude
+                    val longitude = reservation.station?.location?.longitude
+                    val stationName = reservation.station?.name ?: reservation.stationName
+
+                    openMapsWithDirections(
+                        context = context,
+                        latitude = latitude,
+                        longitude = longitude,
+                        stationName = stationName
+                    )
+                },
                 onCancelReservation = onCancelReservation
             )
             Spacer(modifier = Modifier.height(ClaritySpacing.lg))
@@ -841,5 +858,56 @@ private fun ClarityCancelReservationDialog(
                 )
             }
         }
+    }
+}
+/**
+ * Opens the device's maps application with directions to the specified location.
+ * Tries Google Maps first, falls back to generic geo intent if not available.
+ */
+private fun openMapsWithDirections(
+    context: android.content.Context,
+    latitude: Double?,
+    longitude: Double?,
+    stationName: String
+) {
+    if (latitude == null || longitude == null) {
+        Toast.makeText(
+            context,
+            "Location coordinates not available for this station",
+            Toast.LENGTH_SHORT
+        ).show()
+        return
+    }
+
+    try {
+        // Try to open Google Maps with directions
+        val gmmIntentUri = Uri.parse("google.navigation:q=$latitude,$longitude")
+        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+        mapIntent.setPackage("com.google.android.apps.maps")
+
+        // Check if Google Maps is installed
+        if (mapIntent.resolveActivity(context.packageManager) != null) {
+            context.startActivity(mapIntent)
+        } else {
+            // Fallback to generic geo intent (works with any maps app)
+            val geoUri = Uri.parse("geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(stationName)})")
+            val fallbackIntent = Intent(Intent.ACTION_VIEW, geoUri)
+
+            if (fallbackIntent.resolveActivity(context.packageManager) != null) {
+                context.startActivity(fallbackIntent)
+            } else {
+                Toast.makeText(
+                    context,
+                    "No maps application found on this device",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    } catch (e: Exception) {
+        Toast.makeText(
+            context,
+            "Unable to open maps: ${e.message}",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 }
