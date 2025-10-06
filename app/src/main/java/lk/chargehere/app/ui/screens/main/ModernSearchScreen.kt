@@ -9,7 +9,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -30,15 +32,7 @@ fun ModernSearchScreen(
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var searchQuery by remember { mutableStateOf("") }
-
-    LaunchedEffect(searchQuery) {
-        if (searchQuery.isNotBlank()) {
-            viewModel.searchStations(searchQuery)
-        } else {
-            viewModel.clearSearch()
-        }
-    }
+    val searchQuery = uiState.searchQuery
 
     // === CLARITY DESIGN SYSTEM IMPLEMENTATION ===
     ClarityBackground {
@@ -51,7 +45,7 @@ fun ModernSearchScreen(
             // Search Header
             ClaritySearchHeader(
                 searchQuery = searchQuery,
-                onSearchQueryChange = { searchQuery = it },
+                onSearchQueryChange = viewModel::onSearchQueryChange,
                 onNavigateBack = onNavigateBack,
                 modifier = Modifier.padding(horizontal = ClaritySpacing.md)
             )
@@ -60,11 +54,11 @@ fun ModernSearchScreen(
 
             // Search Results Content
             when {
-                uiState.isLoading -> {
+                uiState.isLoading && uiState.searchResults.isEmpty() -> {
                     ClarityLoadingState()
                 }
                 
-                searchQuery.isBlank() -> {
+                searchQuery.isBlank() && uiState.searchResults.isEmpty() -> {
                     ClarityEmptySearchState()
                 }
                 
@@ -73,8 +67,14 @@ fun ModernSearchScreen(
                 }
                 
                 else -> {
+                    val headerText = if (searchQuery.isBlank()) {
+                        "Showing ${uiState.searchResults.size} available stations"
+                    } else {
+                        "${uiState.searchResults.size} stations found"
+                    }
                     ClaritySearchResults(
                         stations = uiState.searchResults,
+                        headerText = headerText,
                         onStationClick = onNavigateToStationDetail
                     )
                 }
@@ -222,6 +222,7 @@ private fun ClarityNoResultsState(query: String) {
 @Composable
 private fun ClaritySearchResults(
     stations: List<Station>,
+    headerText: String,
     onStationClick: (String) -> Unit
 ) {
     LazyColumn(
@@ -235,7 +236,7 @@ private fun ClaritySearchResults(
         // Results header
         item {
             Text(
-                text = "${stations.size} stations found",
+                text = headerText,
                 style = MaterialTheme.typography.labelMedium,
                 color = ClarityMediumGray,
                 modifier = Modifier.padding(

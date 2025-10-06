@@ -21,6 +21,9 @@ interface StationDao {
     
     @Query("SELECT * FROM stations WHERE is_reservable = 1")
     suspend fun getReservableStations(): List<StationEntity>
+
+    @Query("SELECT * FROM stations WHERE is_available = 1 ORDER BY updated_at DESC LIMIT :limit")
+    suspend fun getAvailableStations(limit: Int): List<StationEntity>
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStation(station: StationEntity)

@@ -6,16 +6,20 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import lk.chargehere.app.data.repository.ReservationRepository
 import lk.chargehere.app.data.mapper.toDomain
+import lk.chargehere.app.data.repository.ReservationRepository
+import lk.chargehere.app.data.repository.StationRepository
 import lk.chargehere.app.domain.model.Reservation
+import lk.chargehere.app.domain.model.Station
 import lk.chargehere.app.utils.Result
 import javax.inject.Inject
 
 data class ReservationDetailUiState(
     val isLoading: Boolean = false,
     val reservation: Reservation? = null,
+    val station: Station? = null,
     val error: String? = null,
     val isCancelling: Boolean = false,
     val cancellationSuccess: Boolean = false,
@@ -24,7 +28,8 @@ data class ReservationDetailUiState(
 
 @HiltViewModel
 class ReservationDetailViewModel @Inject constructor(
-    private val reservationRepository: ReservationRepository
+    private val reservationRepository: ReservationRepository,
+    private val stationRepository: StationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReservationDetailUiState())
@@ -34,7 +39,11 @@ class ReservationDetailViewModel @Inject constructor(
         viewModelScope.launch {
             android.util.Log.d("ReservationDetailViewModel", "Loading reservation detail for ID: $reservationId")
             android.util.Log.d("ReservationDetailViewModel", "API Call: GET /api/v1/bookings/$reservationId")
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                station = null
+            )
 
             // Use the GetBookingById endpoint
             when (val result = reservationRepository.getBookingById(reservationId)) {
@@ -48,12 +57,14 @@ class ReservationDetailViewModel @Inject constructor(
                         isLoading = false,
                         reservation = reservation
                     )
+                    resolveStationForReservation(reservation.stationId)
                 }
                 is Result.Error -> {
                     android.util.Log.e("ReservationDetailViewModel", "Failed to load booking detail: ${result.message}")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = result.message
+                        error = result.message,
+                        station = null
                     )
                 }
                 is Result.Loading -> {
@@ -102,5 +113,31 @@ class ReservationDetailViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    private fun resolveStationForReservation(stationId: String) {
+        viewModelScope.launch {
+            val cachedStation = stationRepository.getCachedStation(stationId)
+            if (cachedStation != null) {
+                _uiState.update { current ->
+                    current.copy(station = cachedStation)
+                }
+                return@launch
+            }
+
+            when (val apiResult = stationRepository.getChargingStationById(stationId)) {
+                is Result.Success -> {
+                    _uiState.update { current ->
+                        current.copy(station = apiResult.data)
+                    }
+                }
+
+                is Result.Error -> {
+                    android.util.Log.w("ReservationDetailViewModel", "Unable to resolve station from API: ${apiResult.message}")
+                }
+
+                is Result.Loading -> Unit
+            }
+        }
     }
 }

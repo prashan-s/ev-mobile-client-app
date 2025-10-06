@@ -178,6 +178,18 @@ class StationRepository @Inject constructor(
         return stationDao.getAllStations().map { it.toDomain() }
     }
     
+    suspend fun getAvailableStations(limit: Int): List<Station> {
+        return stationDao.getAvailableStations(limit).map { it.toDomain() }
+    }
+
+    suspend fun getCachedStation(stationId: String): Station? {
+        return stationDao.getStationById(stationId)?.toDomain()
+    }
+
+    suspend fun searchCachedStations(query: String): List<Station> {
+        return stationDao.searchStations(query).map { it.toDomain() }
+    }
+
     suspend fun getReservableStations(): List<Station> {
         return stationDao.getReservableStations().map { it.toDomain() }
     }

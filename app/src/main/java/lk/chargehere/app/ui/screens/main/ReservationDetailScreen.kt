@@ -24,6 +24,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import lk.chargehere.app.domain.model.Reservation
+import lk.chargehere.app.domain.model.Station
 import lk.chargehere.app.ui.viewmodel.ReservationDetailViewModel
 import lk.chargehere.app.ui.components.QRCodeGenerator
 import lk.chargehere.app.ui.components.*
@@ -83,6 +84,7 @@ fun ReservationDetailScreen(
                     uiState.reservation != null -> {
                         ClarityReservationDetailContent(
                             reservation = uiState.reservation!!,
+                            station = uiState.station,
                             onCancelReservation = { showCancelDialog = true },
                             context = context
                         )
@@ -209,6 +211,7 @@ private fun ClarityDetailErrorState(
 @Composable
 private fun ClarityReservationDetailContent(
     reservation: Reservation,
+    station: Station?,
     onCancelReservation: () -> Unit,
     context: android.content.Context
 ) {
@@ -365,10 +368,12 @@ private fun ClarityReservationDetailContent(
             ModernActionButtons(
                 canCancel = (statusLower == "pending" || statusLower == "confirmed" || statusLower == "approved") && reservation.canBeModified,
                 onGetDirections = {
-                    // Use coordinates from station object (from chargingStation in API)
-                    val latitude = reservation.station?.location?.latitude
-                    val longitude = reservation.station?.location?.longitude
-                    val stationName = reservation.station?.name ?: reservation.stationName
+                    // Prefer station coordinates resolved from the local database
+                    val latitude = station?.latitude ?: reservation.stationLatitude
+                    val longitude = station?.longitude ?: reservation.stationLongitude
+                    val stationName = station?.name
+                        ?: reservation.station?.name
+                        ?: reservation.stationName
 
                     openMapsWithDirections(
                         context = context,
