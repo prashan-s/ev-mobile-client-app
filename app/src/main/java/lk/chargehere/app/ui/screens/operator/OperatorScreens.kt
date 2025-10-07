@@ -193,12 +193,35 @@ fun OperatorHomeScreen(
 
                     Spacer(modifier = Modifier.height(ClaritySpacing.xl))
 
-                    ClarityPrimaryButton(
-                        text = "Open Scanner",
+                    Surface(
                         onClick = onNavigateToQRScanner,
-                        icon = Icons.Default.QrCodeScanner,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(ClaritySpacing.md),
+                        color = ClarityAccentBlue,
+                        shadowElevation = 8.dp
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = null,
+                                tint = ClarityPureWhite,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(ClaritySpacing.sm))
+                            Text(
+                                text = "Open Scanner",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = ClarityPureWhite,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 }
             }
 
