@@ -1,5 +1,6 @@
 package lk.chargehere.app.ui.screens.operator
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,7 +11,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,10 +31,39 @@ fun OperatorHomeScreen(
 ) {
     val stationName = tokenManager.getStationName()
 
+    // Pulse animation for the QR icon
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
+
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ClarityBackgroundGray)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        ClarityBackgroundGray,
+                        ClarityPureWhite
+                    )
+                )
+            )
     ) {
         // Sign out button in top right
         Row(
@@ -40,18 +72,21 @@ fun OperatorHomeScreen(
                 .padding(ClaritySpacing.md),
             horizontalArrangement = Arrangement.End
         ) {
-            IconButton(
+            Surface(
                 onClick = onNavigateToAuth,
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(ClaritySurfaceWhite, CircleShape)
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                color = ClaritySurfaceWhite,
+                shadowElevation = 2.dp
             ) {
-                Icon(
-                    imageVector = Icons.Default.Logout,
-                    contentDescription = "Sign Out",
-                    tint = ClarityDarkGray,
-                    modifier = Modifier.size(20.dp)
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Logout,
+                        contentDescription = "Sign Out",
+                        tint = ClarityDarkGray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
 
@@ -63,7 +98,7 @@ fun OperatorHomeScreen(
         ) {
             Spacer(modifier = Modifier.height(ClaritySpacing.xxxl))
 
-            // Station name at top
+            // Station name at top with enhanced styling
             if (stationName != null) {
                 Text(
                     text = stationName,
@@ -75,11 +110,21 @@ fun OperatorHomeScreen(
 
                 Spacer(modifier = Modifier.height(ClaritySpacing.xs))
 
-                Text(
-                    text = "Station Manager",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ClarityMediumGray
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(ClaritySpacing.xs)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(ClaritySuccessGreen, CircleShape)
+                    )
+                    Text(
+                        text = "Station Manager",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ClarityMediumGray
+                    )
+                }
             } else {
                 Text(
                     text = "Station Manager",
@@ -91,7 +136,7 @@ fun OperatorHomeScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Center QR scanner button with modern design
+            // Center QR scanner button with animated design
             ClarityCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -104,14 +149,15 @@ fun OperatorHomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // QR icon with gradient background
+                    // QR icon with animated gradient background
                     Box(
                         modifier = Modifier
-                            .size(120.dp)
+                            .size(140.dp)
+                            .scale(pulseScale)
                             .background(
                                 brush = Brush.radialGradient(
                                     colors = listOf(
-                                        ClarityAccentBlue.copy(alpha = 0.15f),
+                                        ClarityAccentBlue.copy(alpha = pulseAlpha),
                                         ClarityAccentBlue.copy(alpha = 0.05f)
                                     )
                                 ),
@@ -123,11 +169,11 @@ fun OperatorHomeScreen(
                             imageVector = Icons.Default.QrCodeScanner,
                             contentDescription = "QR Scanner",
                             tint = ClarityAccentBlue,
-                            modifier = Modifier.size(64.dp)
+                            modifier = Modifier.size(70.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(ClaritySpacing.lg))
+                    Spacer(modifier = Modifier.height(ClaritySpacing.xl))
 
                     Text(
                         text = "Scan Customer QR",
@@ -139,13 +185,13 @@ fun OperatorHomeScreen(
                     Spacer(modifier = Modifier.height(ClaritySpacing.xs))
 
                     Text(
-                        text = "Scan the QR code to view booking details",
+                        text = "Scan the QR code to view booking details and start the charging session",
                         style = MaterialTheme.typography.bodyMedium,
                         color = ClarityMediumGray,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(ClaritySpacing.lg))
+                    Spacer(modifier = Modifier.height(ClaritySpacing.xl))
 
                     ClarityPrimaryButton(
                         text = "Open Scanner",
@@ -168,24 +214,35 @@ fun QRScannerScreen(
     onNavigateBack: () -> Unit
 ) {
     var scannedCode by remember { mutableStateOf("") }
+    var showManualEntry by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(ClarityDarkGray)
     ) {
-        // Header with back button
+        // Live Camera Preview with QR Scanner
+        QRScannerComponent(
+            onQRCodeScanned = { qrCode ->
+                // Navigate to booking detail with scanned code
+                onNavigateToBookingDetail(qrCode)
+            },
+            showInstructions = !showManualEntry
+        )
+
+        // Header with back button and manual entry toggle
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(ClaritySpacing.md),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(
                 onClick = onNavigateBack,
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(ClaritySurfaceWhite.copy(alpha = 0.2f), CircleShape)
+                    .size(48.dp)
+                    .background(Color(0xFF000000).copy(alpha = 0.5f), CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
@@ -194,99 +251,82 @@ fun QRScannerScreen(
                     modifier = Modifier.size(20.dp)
                 )
             }
+
+            // Manual entry toggle
+            IconButton(
+                onClick = { showManualEntry = !showManualEntry },
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Color(0xFF000000).copy(alpha = 0.5f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = if (showManualEntry) Icons.Default.QrCodeScanner else Icons.Default.Keyboard,
+                    contentDescription = if (showManualEntry) "Scan Mode" else "Manual Entry",
+                    tint = ClarityPureWhite,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(ClaritySpacing.lg),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(ClaritySpacing.xxxl))
-            Spacer(modifier = Modifier.height(ClaritySpacing.xxxl))
-
-            // Camera preview placeholder
-            Box(
+        // Manual input overlay (optional)
+        if (showManualEntry) {
+            Column(
                 modifier = Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .background(ClarityDarkGray.copy(alpha = 0.5f), RoundedCornerShape(ClaritySpacing.md)),
-                contentAlignment = Alignment.Center
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color(0xFF000000).copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+                    .padding(ClaritySpacing.lg)
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(ClaritySpacing.md),
+                    colors = CardDefaults.cardColors(
+                        containerColor = ClaritySurfaceWhite.copy(alpha = 0.15f)
+                    )
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCodeScanner,
-                        contentDescription = "QR Scanner",
-                        tint = ClarityPureWhite,
-                        modifier = Modifier.size(120.dp)
-                    )
+                    Column(
+                        modifier = Modifier.padding(ClaritySpacing.md)
+                    ) {
+                        Text(
+                            text = "Manual Entry",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = ClarityPureWhite,
+                            fontWeight = FontWeight.SemiBold
+                        )
 
-                    Spacer(modifier = Modifier.height(ClaritySpacing.md))
+                        Spacer(modifier = Modifier.height(ClaritySpacing.sm))
 
-                    Text(
-                        text = "Position QR code within frame",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = ClarityPureWhite,
-                        textAlign = TextAlign.Center
-                    )
+                        ChargeHereTextField(
+                            value = scannedCode,
+                            onValueChange = { scannedCode = it },
+                            label = "Booking ID",
+                            placeholder = "Enter booking ID",
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                    Text(
-                        text = "Camera scanning will be activated here",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = ClarityPureWhite.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = ClaritySpacing.xs)
-                    )
+                        Spacer(modifier = Modifier.height(ClaritySpacing.sm))
+
+                        ClarityPrimaryButton(
+                            text = "Continue",
+                            onClick = {
+                                if (scannedCode.isNotBlank()) {
+                                    onNavigateToBookingDetail(scannedCode)
+                                }
+                            },
+                            enabled = scannedCode.isNotBlank(),
+                            icon = Icons.Default.ArrowForward,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Manual input for testing
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(ClaritySpacing.md),
-                colors = CardDefaults.cardColors(
-                    containerColor = ClaritySurfaceWhite.copy(alpha = 0.1f)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(ClaritySpacing.md)
-                ) {
-                    Text(
-                        text = "Test Mode - Manual Entry",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = ClarityPureWhite.copy(alpha = 0.7f)
-                    )
-
-                    Spacer(modifier = Modifier.height(ClaritySpacing.sm))
-
-                    ChargeHereTextField(
-                        value = scannedCode,
-                        onValueChange = { scannedCode = it },
-                        label = "Booking ID",
-                        placeholder = "Enter booking ID for testing",
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(ClaritySpacing.sm))
-
-                    ClarityPrimaryButton(
-                        text = "Navigate to Booking",
-                        onClick = {
-                            if (scannedCode.isNotBlank()) {
-                                onNavigateToBookingDetail(scannedCode)
-                            }
-                        },
-                        enabled = scannedCode.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(ClaritySpacing.lg))
         }
     }
 }

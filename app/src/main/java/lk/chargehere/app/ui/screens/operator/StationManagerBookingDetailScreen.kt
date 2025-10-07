@@ -1,6 +1,9 @@
 package lk.chargehere.app.ui.screens.operator
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -12,7 +15,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -24,6 +32,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 
 @Composable
 fun StationManagerBookingDetailScreen(
@@ -46,18 +55,97 @@ fun StationManagerBookingDetailScreen(
         }
     }
 
+    var swipeOffset by remember { mutableStateOf(0f) }
+    val swipeThreshold = 300f
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(ClarityBackgroundGray)
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (swipeOffset > swipeThreshold) {
+                            onNavigateBack()
+                        }
+                        swipeOffset = 0f
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        if (dragAmount > 0) { // Only allow right swipe
+                            swipeOffset += dragAmount
+                        }
+                    }
+                )
+            }
     ) {
         when {
             uiState.isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(ClaritySpacing.md)
                 ) {
-                    CircularProgressIndicator(color = ClarityAccentBlue)
+                    // Header shimmer
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = ClaritySpacing.md),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ShimmerEffect(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(ClaritySpacing.sm))
+                        ShimmerEffect(
+                            modifier = Modifier
+                                .width(150.dp)
+                                .height(28.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(ClaritySpacing.md))
+
+                    // Booking card shimmer
+                    BookingCardShimmer(modifier = Modifier.fillMaxWidth())
+
+                    Spacer(modifier = Modifier.height(ClaritySpacing.lg))
+
+                    // Additional details shimmer
+                    ClarityCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(ClaritySpacing.md)) {
+                            repeat(5) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    ShimmerEffect(
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .clip(CircleShape)
+                                    )
+                                    Spacer(modifier = Modifier.width(ClaritySpacing.sm))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        ShimmerEffect(
+                                            modifier = Modifier
+                                                .fillMaxWidth(0.3f)
+                                                .height(14.dp)
+                                                .clip(RoundedCornerShape(4.dp))
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        ShimmerEffect(
+                                            modifier = Modifier
+                                                .fillMaxWidth(0.6f)
+                                                .height(18.dp)
+                                                .clip(RoundedCornerShape(4.dp))
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -132,10 +220,32 @@ private fun StationManagerBookingContent(
         LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
     } ?: startDateTime.plusMinutes(booking.durationMinutes.toLong())
 
+    // Entry animations
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+        label = "alpha"
+    )
+
+    val animatedOffset by animateDpAsState(
+        targetValue = if (visible) 0.dp else 30.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "offset"
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .alpha(animatedAlpha)
     ) {
         // Header with back button
         Row(
@@ -163,7 +273,9 @@ private fun StationManagerBookingContent(
         }
 
         Column(
-            modifier = Modifier.padding(horizontal = ClaritySpacing.md)
+            modifier = Modifier
+                .padding(horizontal = ClaritySpacing.md)
+                .offset(y = animatedOffset)
         ) {
             // Highlighted information card
             ClarityCard(
@@ -375,6 +487,18 @@ private fun CompleteBookingDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    // Success icon pulse animation
+    val infiniteTransition = rememberInfiniteTransition(label = "successPulse")
+    val iconScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "iconScale"
+    )
+
     ClarityModal(
         onDismiss = if (isLoading) { {} } else onDismiss,
         modifier = Modifier.padding(ClaritySpacing.lg)
@@ -386,6 +510,7 @@ private fun CompleteBookingDialog(
             Box(
                 modifier = Modifier
                     .size(64.dp)
+                    .scale(if (isLoading) 1f else iconScale)
                     .background(ClaritySuccessGreen.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {

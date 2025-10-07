@@ -1,10 +1,12 @@
 package lk.chargehere.app.ui.components
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -774,6 +777,101 @@ fun ClarityStepIndicator(
                             if (step < currentStep) ClarityAccentBlue else ClarityLightGray
                         )
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Shimmer loading effect for skeleton screens
+ */
+@Composable
+fun ShimmerEffect(
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val translateAnim by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerTranslate"
+    )
+
+    Box(
+        modifier = modifier
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        ClarityLightGray,
+                        ClarityLightGray.copy(alpha = 0.5f),
+                        ClarityLightGray
+                    ),
+                    start = Offset(translateAnim - 1000f, translateAnim - 1000f),
+                    end = Offset(translateAnim, translateAnim)
+                )
+            )
+    )
+}
+
+/**
+ * Shimmer loading skeleton for booking cards
+ */
+@Composable
+fun BookingCardShimmer(modifier: Modifier = Modifier) {
+    ClarityCard(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(ClaritySpacing.md)) {
+            // Title shimmer
+            ShimmerEffect(
+                modifier = Modifier
+                    .fillMaxWidth(0.6f)
+                    .height(24.dp)
+                    .clip(RoundedCornerShape(4.dp))
+            )
+
+            Spacer(modifier = Modifier.height(ClaritySpacing.sm))
+
+            // Highlighted info rows
+            repeat(3) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(ClaritySpacing.sm),
+                    colors = CardDefaults.cardColors(
+                        containerColor = ClarityLightGray.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(ClaritySpacing.md),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Icon shimmer
+                        ShimmerEffect(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(ClaritySpacing.md))
+                        Column(modifier = Modifier.weight(1f)) {
+                            ShimmerEffect(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.4f)
+                                    .height(14.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            ShimmerEffect(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.7f)
+                                    .height(18.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                        }
+                    }
+                }
             }
         }
     }
