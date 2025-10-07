@@ -395,10 +395,20 @@ private fun ClarityReservationSection(
                     .padding(vertical = ClaritySpacing.sm),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                QRCodeGenerator(
-                    content = reservation.qrPayload ?: "reservation:${reservation.id}",
-                    modifier = Modifier.size(180.dp)
-                )
+                val qrContent = reservation.id.takeIf { it.isNotBlank() }
+                if (qrContent != null) {
+                    QRCodeGenerator(
+                        content = qrContent,
+                        modifier = Modifier.size(180.dp)
+                    )
+                } else {
+                    Text(
+                        text = "QR unavailable",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ClarityMediumGray,
+                        textAlign = TextAlign.Center
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(ClaritySpacing.sm))
 

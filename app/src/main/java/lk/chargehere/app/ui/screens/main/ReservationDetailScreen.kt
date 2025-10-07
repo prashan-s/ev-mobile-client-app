@@ -351,9 +351,7 @@ private fun ClarityReservationDetailContent(
 
         // QR Code Section (only for active bookings)
         if (statusLower == "confirmed" || statusLower == "in_progress" || statusLower == "approved") {
-            val qrContent = reservation.qrPayload?.takeIf { it.isNotBlank() }
-                ?: reservation.bookingNumber?.takeIf { it.isNotBlank() }
-                ?: reservation.id
+            val qrContent = reservation.id
             val referenceLabel = reservation.bookingNumber?.takeIf { it.isNotBlank() }?.let { "Booking $it" }
 
             ModernQRCodeCard(
