@@ -37,4 +37,8 @@ interface ReservationApiService {
         @Query("sortBy") sortBy: String? = null,
         @Query("sortOrder") sortOrder: String = "desc"
     ): Response<PaginatedBookingsResponse>
+
+    // Complete Booking - POST /api/v1/bookings/{id}/complete
+    @POST("/api/v1/bookings/{id}/complete")
+    suspend fun completeBooking(@Path("id") bookingId: String): Response<Unit>
 }

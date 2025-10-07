@@ -52,6 +52,22 @@ fun ChargeHereNavigation(
                 OnboardingScreen(
                     onNavigateToLogin = {
                         navController.navigate(Screen.Login.route)
+                    },
+                    onNavigateToStationManagerLogin = {
+                        navController.navigate(Screen.StationManagerLogin.route)
+                    }
+                )
+            }
+
+            composable(Screen.StationManagerLogin.route) {
+                StationManagerLoginScreen(
+                    onNavigateToOperatorHome = {
+                        navController.navigate(NavigationGraph.Operator.route) {
+                            popUpTo(NavigationGraph.Auth.route) { inclusive = true }
+                        }
+                    },
+                    onNavigateBack = {
+                        navController.popBackStack()
                     }
                 )
             }
@@ -217,6 +233,25 @@ fun ChargeHereNavigation(
                     onNavigateToSessionValidation = { sessionId ->
                         navController.navigate(Screen.SessionValidation.createRoute(sessionId))
                     },
+                    onNavigateToBookingDetail = { bookingId ->
+                        navController.navigate(Screen.StationManagerBookingDetail.createRoute(bookingId))
+                    },
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
+            composable(
+                route = Screen.StationManagerBookingDetail.route,
+                arguments = listOf(
+                    navArgument("bookingId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val bookingId = backStackEntry.arguments?.getString("bookingId") ?: ""
+
+                StationManagerBookingDetailScreen(
+                    bookingId = bookingId,
                     onNavigateBack = {
                         navController.popBackStack()
                     }

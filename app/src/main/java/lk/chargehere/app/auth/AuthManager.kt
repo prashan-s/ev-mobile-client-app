@@ -58,6 +58,40 @@ class AuthManager @Inject constructor(
             is Result.Loading -> Result.Loading
         }
     }
+
+    // Email/Password Login for Station Operator
+    suspend fun loginStationOperator(email: String, password: String): Result<String?> {
+        android.util.Log.d("AuthManager", "loginStationOperator called for email: $email")
+        return when (val result = userRepository.loginStationOperator(email, password)) {
+            is Result.Success -> {
+                val (userId, accessToken, stationName) = result.data
+                android.util.Log.d("AuthManager", "Station operator login successful - accessToken: ${accessToken.take(50)}...")
+                android.util.Log.d("AuthManager", "Station name: $stationName")
+
+                val resolvedStationName = if (stationName.isNullOrBlank()) {
+                    android.util.Log.w("AuthManager", "Station name missing; defaulting to 'Not Assigned'")
+                    "Not Assigned"
+                } else {
+                    stationName
+                }
+
+                // Save tokens and user info for station operator
+                tokenManager.saveTokens(accessToken, "", 3600)
+                tokenManager.saveUserInfo(userId, email, "OPERATOR", null)
+
+                // Save station name to preferences for later use
+                tokenManager.saveStationName(resolvedStationName)
+
+                android.util.Log.d("AuthManager", "Station operator tokens and info saved")
+                Result.Success(resolvedStationName)
+            }
+            is Result.Error -> {
+                android.util.Log.e("AuthManager", "Station operator login failed: ${result.message}")
+                result
+            }
+            is Result.Loading -> Result.Loading
+        }
+    }
     
     // Legacy Google Sign-In methods (kept for backward compatibility if needed)
     @Deprecated("Use email/password authentication instead")

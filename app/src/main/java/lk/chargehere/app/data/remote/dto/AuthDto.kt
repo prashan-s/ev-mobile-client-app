@@ -83,3 +83,21 @@ data class UpdateProfileRequest(
 data class MessageResponse(
     val message: String
 )
+
+// Station Operator DTOs
+data class StationOperatorLoginRequest(
+    val email: String,
+    val password: String
+)
+
+data class StationOperatorLoginResponse(
+    @SerializedName("accessToken")
+    val accessToken: String? = null,
+    @SerializedName("token")
+    val legacyToken: String? = null,
+    val userId: String? = null,
+    val stationId: String? = null,
+    val stationName: String? = null
+){
+    fun getToken(): String = accessToken ?: legacyToken ?: ""
+}

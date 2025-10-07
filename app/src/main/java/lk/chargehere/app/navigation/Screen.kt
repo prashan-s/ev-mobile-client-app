@@ -6,6 +6,7 @@ sealed class Screen(val route: String) {
     data object Onboarding : Screen("onboarding")
     data object Login : Screen("login")
     data object Register : Screen("register")
+    data object StationManagerLogin : Screen("station_manager_login")
     
     // Main Flow - EV Owner
     data object Home : Screen("home")
@@ -30,6 +31,9 @@ sealed class Screen(val route: String) {
     }
     data object SessionDetail : Screen("session_detail/{sessionId}") {
         fun createRoute(sessionId: String) = "session_detail/$sessionId"
+    }
+    data object StationManagerBookingDetail : Screen("station_manager_booking_detail/{bookingId}") {
+        fun createRoute(bookingId: String) = "station_manager_booking_detail/$bookingId"
     }
 }
 

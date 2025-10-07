@@ -48,4 +48,8 @@ interface AuthApiService {
     // Delete EVOwner - DELETE /api/v1/evowners/{nic}
     @DELETE("/api/v1/evowners/{nic}")
     suspend fun deleteAccount(@Path("nic") nic: String): Response<Unit>
+
+    // Station Operator Login - POST /api/v1/users/station-operators/login
+    @POST("/api/v1/users/station-operators/login")
+    suspend fun loginStationOperator(@Body request: StationOperatorLoginRequest): Response<StationOperatorLoginResponse>
 }

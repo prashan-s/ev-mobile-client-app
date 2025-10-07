@@ -232,4 +232,26 @@ class ReservationRepository @Inject constructor(
         return reservationDao.getApprovedReservationsCount(userId)
     }
 
+    // Complete booking for station operators
+    suspend fun completeBooking(bookingId: String): Result<Unit> {
+        return try {
+            android.util.Log.d("ReservationRepository", "Completing booking: $bookingId")
+            val response = reservationApiService.completeBooking(bookingId)
+
+            if (response.isSuccessful) {
+                android.util.Log.d("ReservationRepository", "Booking completed successfully")
+                // Optionally update local database if needed
+                Result.Success(Unit)
+            } else {
+                val errorBody = response.errorBody()?.string()
+                val formattedError = ErrorParser.parseError(errorBody)
+                android.util.Log.e("ReservationRepository", "Failed to complete booking: $formattedError")
+                Result.Error(formattedError)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ReservationRepository", "Error completing booking: ${e.message}", e)
+            Result.Error("Network error: ${e.message}")
+        }
+    }
+
 }

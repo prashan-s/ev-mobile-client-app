@@ -1,5 +1,6 @@
 package lk.chargehere.app.data.repository
 
+import android.util.Base64
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import lk.chargehere.app.data.local.dao.UserDao
@@ -9,6 +10,7 @@ import lk.chargehere.app.data.remote.dto.*
 import lk.chargehere.app.domain.model.User
 import lk.chargehere.app.utils.Result
 import lk.chargehere.app.utils.ErrorParser
+import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -128,6 +130,51 @@ class UserRepository @Inject constructor(
         }
     }
     
+    // Login Station Operator with email/password
+    suspend fun loginStationOperator(email: String, password: String): Result<Triple<String, String, String?>> {
+        return try {
+            android.util.Log.d("UserRepository", "Station operator login attempt for email: $email")
+            val request = StationOperatorLoginRequest(email, password)
+            val response = authApiService.loginStationOperator(request)
+
+            if (response.isSuccessful) {
+                val loginResponse = response.body()
+                android.util.Log.d("UserRepository", "Station operator login response received: ${loginResponse != null}")
+
+                if (loginResponse != null) {
+                    val token = loginResponse.getToken()
+                    val userId = resolveUserId(loginResponse.userId, token)
+                    val stationName = loginResponse.stationName
+
+                    if (token.isBlank()) {
+                        android.util.Log.e("UserRepository", "Station operator token missing from response")
+                        return Result.Error("Login failed: No token received")
+                    }
+
+                    if (userId.isBlank()) {
+                        android.util.Log.e("UserRepository", "Station operator userId missing from response and token")
+                        return Result.Error("Login failed: No user identifier received")
+                    }
+
+                    android.util.Log.d("UserRepository", "Station operator token: ${token.take(50)}...")
+                    android.util.Log.d("UserRepository", "Station name: $stationName")
+
+                    // Return userId, token, and stationName
+                    Result.Success(Triple(userId, token, stationName))
+                } else {
+                    Result.Error("Login failed: No auth data received")
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                val formattedError = ErrorParser.parseError(errorBody)
+                Result.Error(formattedError)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("UserRepository", "Station operator login error: ${e.message}", e)
+            Result.Error("Network error: ${e.message}")
+        }
+    }
+
     // Sign in with Google OAuth
     suspend fun signInWithGoogle(idToken: String): Result<Pair<User, String>> {
         return try {
@@ -280,5 +327,32 @@ class UserRepository @Inject constructor(
     
     suspend fun deleteUser(userId: String) {
         userDao.deleteUser(userId)
+    }
+
+    private fun resolveUserId(userIdFromResponse: String?, token: String): String {
+        if (!userIdFromResponse.isNullOrBlank()) {
+            return userIdFromResponse
+        }
+
+        val fromToken = extractClaimFromToken(token, "userId")
+            ?: extractClaimFromToken(token, "sub")
+
+        return fromToken ?: ""
+    }
+
+    private fun extractClaimFromToken(token: String, claim: String): String? {
+        return try {
+            val parts = token.split(".")
+            if (parts.size < 2) {
+                return null
+            }
+
+            val payloadBytes = Base64.decode(parts[1], Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+            val payloadJson = JSONObject(String(payloadBytes))
+            if (payloadJson.has(claim)) payloadJson.optString(claim, null) else null
+        } catch (e: Exception) {
+            android.util.Log.e("UserRepository", "Failed to extract '$claim' from token: ${e.message}")
+            null
+        }
     }
 }

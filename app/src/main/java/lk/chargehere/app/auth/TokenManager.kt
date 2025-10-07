@@ -124,6 +124,7 @@ class TokenManager @Inject constructor(
         private const val KEY_USER_ROLE = "user_role"
         private const val KEY_USER_NIC = "user_nic"
         private const val KEY_IS_LOGGED_IN = "is_logged_in"
+        private const val KEY_STATION_NAME = "station_name"
     }
     
     fun saveTokens(accessToken: String, refreshToken: String, expiresIn: Long) {
@@ -204,7 +205,22 @@ class TokenManager @Inject constructor(
 
         return nic
     }
-    
+
+    fun saveStationName(stationName: String?) {
+        sharedPreferences.edit().apply {
+            if (stationName != null) {
+                putString(KEY_STATION_NAME, stationName)
+            } else {
+                remove(KEY_STATION_NAME)
+            }
+            apply()
+        }
+    }
+
+    fun getStationName(): String? {
+        return sharedPreferences.getString(KEY_STATION_NAME, null)
+    }
+
     fun clearTokens() {
         sharedPreferences.edit().apply {
             remove(KEY_ACCESS_TOKEN)
@@ -214,6 +230,7 @@ class TokenManager @Inject constructor(
             remove(KEY_USER_EMAIL)
             remove(KEY_USER_ROLE)
             remove(KEY_USER_NIC)
+            remove(KEY_STATION_NAME)
             putBoolean(KEY_IS_LOGGED_IN, false)
             apply()
         }

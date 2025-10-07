@@ -1,5 +1,9 @@
 package lk.chargehere.app.ui.screens.auth
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,150 +16,207 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import lk.chargehere.app.ui.components.ChargeHereButton
 import lk.chargehere.app.ui.components.ButtonVariant
+import lk.chargehere.app.ui.theme.*
 
 data class OnboardingPage(
     val title: String,
     val description: String,
-    val icon: String
+    val icon: String,
+    val gradientColors: List<Color>
 )
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OnboardingScreen(
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onNavigateToStationManagerLogin: () -> Unit = {}
 ) {
     val pages = listOf(
         OnboardingPage(
             title = "Find Stations",
             description = "Discover compatible charging stations near you with real-time availability.",
-            icon = "🔍"
+            icon = "🔍",
+            gradientColors = listOf(ClarityAccentBlue.copy(alpha = 0.1f), ClarityPureWhite)
         ),
         OnboardingPage(
             title = "Reserve & Plan",
             description = "Plan your trips with confidence by reserving charging slots in advance.",
-            icon = "📅"
+            icon = "📅",
+            gradientColors = listOf(ClaritySuccessGreen.copy(alpha = 0.1f), ClarityPureWhite)
         ),
         OnboardingPage(
             title = "Track & Manage",
             description = "Easily track your bookings and manage charging sessions from one place.",
-            icon = "⚡"
+            icon = "⚡",
+            gradientColors = listOf(ClarityWarningOrange.copy(alpha = 0.1f), ClarityPureWhite)
         )
     )
-    
+
     val pagerState = rememberPagerState(pageCount = { pages.size })
     val isLastPage = pagerState.currentPage == pages.size - 1
-    
-    Column(
+    val scope = rememberCoroutineScope()
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(ClarityBackgroundGray)
     ) {
-        Spacer(modifier = Modifier.height(48.dp))
-        
-        // Logo and app name
-        Box(
+        Column(
             modifier = Modifier
-                .size(80.dp)
-                .background(
-                    MaterialTheme.colorScheme.primaryContainer,
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(64.dp))
+
+            // Modern Logo with gradient
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                ClarityAccentBlue.copy(alpha = 0.2f),
+                                ClarityAccentBlue.copy(alpha = 0.05f)
+                            )
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "⚡",
+                    style = MaterialTheme.typography.displayLarge,
+                    fontSize = 56.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(ClaritySpacing.md))
+
             Text(
-                text = "⚡",
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.primary
+                text = "ChargeHere",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = ClarityDarkGray
             )
-        }
-        
-        Text(
-            text = "ChargeHere",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(top = 16.dp)
-        )
-        
-        Spacer(modifier = Modifier.height(48.dp))
-        
-        // Pager
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f)
-        ) { page ->
-            OnboardingPageContent(page = pages[page])
-        }
-        
-        // Page indicators
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(vertical = 24.dp)
-        ) {
-            repeat(pages.size) { index ->
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (index == pagerState.currentPage) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+
+            Text(
+                text = "Smart EV Charging",
+                style = MaterialTheme.typography.bodyMedium,
+                color = ClarityMediumGray,
+                modifier = Modifier.padding(top = ClaritySpacing.xs)
+            )
+
+            Spacer(modifier = Modifier.height(ClaritySpacing.xxxl))
+
+            // Modern Pager with animation
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f)
+            ) { page ->
+                OnboardingPageContent(page = pages[page])
+            }
+
+            // Modern Page indicators
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(ClaritySpacing.xs),
+                modifier = Modifier.padding(vertical = ClaritySpacing.lg)
+            ) {
+                repeat(pages.size) { index ->
+                    val isSelected = index == pagerState.currentPage
+                    Box(
+                        modifier = Modifier
+                            .width(if (isSelected) 32.dp else 8.dp)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                if (isSelected) {
+                                    ClarityAccentBlue
+                                } else {
+                                    ClarityMediumGray.copy(alpha = 0.3f)
+                                }
+                            )
+                    )
+                }
+            }
+
+            // Action buttons
+            AnimatedVisibility(
+                visible = isLastPage,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ChargeHereButton(
+                        text = "Get Started",
+                        onClick = onNavigateToLogin,
+                        variant = ButtonVariant.Primary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            AnimatedVisibility(
+                visible = !isLastPage,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ChargeHereButton(
+                        text = "Skip",
+                        onClick = onNavigateToLogin,
+                        variant = ButtonVariant.Tertiary,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(ClaritySpacing.md))
+
+                    ChargeHereButton(
+                        text = "Next",
+                        onClick = {
+                            scope.launch {
+                                pagerState.animateScrollToPage(pagerState.currentPage + 1)
                             }
-                        )
+                        },
+                        variant = ButtonVariant.Primary,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(ClaritySpacing.lg))
+
+            // Subtle station operator button
+            TextButton(
+                onClick = onNavigateToStationManagerLogin,
+                modifier = Modifier.padding(vertical = ClaritySpacing.sm)
+            ) {
+                Text(
+                    text = "Station Operator Sign In",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ClarityMediumGray.copy(alpha = 0.6f),
+                    fontSize = 12.sp
                 )
             }
+
+            Spacer(modifier = Modifier.height(ClaritySpacing.md))
         }
-        
-        // Action buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = if (isLastPage) {
-                Arrangement.Center
-            } else {
-                Arrangement.SpaceBetween
-            }
-        ) {
-            if (!isLastPage) {
-                ChargeHereButton(
-                    text = "Skip",
-                    onClick = onNavigateToLogin,
-                    variant = ButtonVariant.Tertiary,
-                    modifier = Modifier.width(80.dp)
-                )
-                
-                ChargeHereButton(
-                    text = "Next",
-                    onClick = {
-                        // Navigate to next page or login
-                        if (pagerState.currentPage < pages.size - 1) {
-                            // This would be handled by a coroutine in a real implementation
-                        } else {
-                            onNavigateToLogin()
-                        }
-                    },
-                    variant = ButtonVariant.Primary,
-                    modifier = Modifier.width(120.dp)
-                )
-            } else {
-                ChargeHereButton(
-                    text = "Get Started",
-                    onClick = onNavigateToLogin,
-                    variant = ButtonVariant.Primary,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -169,42 +230,47 @@ private fun OnboardingPageContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Icon
+        // Modern Icon with gradient background
         Box(
             modifier = Modifier
-                .size(120.dp)
+                .size(140.dp)
                 .background(
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                    RoundedCornerShape(32.dp)
-                ),
+                    brush = Brush.linearGradient(
+                        colors = page.gradientColors
+                    ),
+                    shape = RoundedCornerShape(32.dp)
+                )
+                .clip(RoundedCornerShape(32.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = page.icon,
-                style = MaterialTheme.typography.displayMedium
+                style = MaterialTheme.typography.displayLarge,
+                fontSize = 72.sp
             )
         }
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
+
+        Spacer(modifier = Modifier.height(ClaritySpacing.xl))
+
         // Title
         Text(
             text = page.title,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
+            color = ClarityDarkGray
         )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
+
+        Spacer(modifier = Modifier.height(ClaritySpacing.md))
+
         // Description
         Text(
             text = page.description,
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.2
+            color = ClarityMediumGray,
+            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.4,
+            modifier = Modifier.padding(horizontal = ClaritySpacing.lg)
         )
     }
 }
