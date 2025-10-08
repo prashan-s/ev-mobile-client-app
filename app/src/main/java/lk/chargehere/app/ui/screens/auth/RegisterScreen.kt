@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import lk.chargehere.app.ui.components.*
 import lk.chargehere.app.ui.utils.keyboardAwareScrollPadding
@@ -45,7 +46,11 @@ fun RegisterScreen(
         }
     }
     
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         TopAppBar(
             title = { Text("Create Account") },
             navigationIcon = {
@@ -57,7 +62,7 @@ fun RegisterScreen(
                 }
             }
         )
-        
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -96,7 +101,7 @@ fun RegisterScreen(
                 text = "Fill in your details to access charging station reservations and more.",
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
                 modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
             )
             
@@ -197,14 +202,16 @@ fun RegisterScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
+                    shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
                     )
                 ) {
                     Text(
                         text = uiState.errorMessage.orEmpty(),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
@@ -227,7 +234,8 @@ fun RegisterScreen(
                 text = "By creating an account you agree to our Terms of Service and acknowledge our Privacy Policy.",
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                lineHeight = 18.sp
             )
             
             Spacer(modifier = Modifier.height(32.dp))

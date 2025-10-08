@@ -46,6 +46,7 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .keyboardImePadding()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -80,11 +81,9 @@ fun LoginScreen(
             text = "Sign in to find and reserve charging stations",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp, bottom = 48.dp)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
+            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
         )
-        
-        Spacer(modifier = Modifier.height(32.dp))
         
         ChargeHereTextField(
             value = uiState.email,
@@ -120,14 +119,16 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
                 )
             ) {
                 Text(
                     text = uiState.errorMessage.orEmpty(),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(16.dp)
                 )
             }
@@ -152,7 +153,11 @@ fun LoginScreen(
             onClick = onNavigateToRegister,
             enabled = !uiState.isLoading
         ) {
-            Text(text = "Don't have an account? Create one")
+            Text(
+                text = "Don't have an account? Create one",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
     

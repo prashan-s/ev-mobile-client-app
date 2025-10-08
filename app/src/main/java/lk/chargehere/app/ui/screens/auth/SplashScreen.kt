@@ -57,7 +57,7 @@ fun SplashScreen(
                 modifier = Modifier
                     .size(120.dp)
                     .background(
-                        Color.White.copy(alpha = 0.2f),
+                        Color.White.copy(alpha = 0.25f),
                         androidx.compose.foundation.shape.CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -79,7 +79,8 @@ fun SplashScreen(
             Text(
                 text = "Find, Reserve, Charge",
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.95f),
                 textAlign = TextAlign.Center
             )
             

@@ -739,14 +739,20 @@ private fun BottomNavigationButtons(
                 ClaritySecondaryButton(
                     text = "Previous",
                     onClick = onPrevious,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(if (currentStep == totalSteps) 0.7f else 1f)
                 )
             }
 
             ClarityPrimaryButton(
                 text = if (currentStep < totalSteps) "Next" else "Confirm Booking",
                 onClick = onNext,
-                modifier = Modifier.weight(if (currentStep > 1) 1f else 2f),
+                modifier = Modifier.weight(
+                    when {
+                        currentStep == 1 -> 2f // First step: no previous button, take full width
+                        currentStep == totalSteps -> 1.3f // Final step: give more space to confirm action
+                        else -> 1f // Middle steps: equal weight
+                    }
+                ),
                 enabled = canProceed,
                 icon = if (currentStep < totalSteps) Icons.Default.ArrowForward else Icons.Default.CheckCircle
             )

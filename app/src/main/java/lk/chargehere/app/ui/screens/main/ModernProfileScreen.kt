@@ -71,62 +71,6 @@ fun ModernProfileScreen(
             
             Spacer(modifier = Modifier.height(ClaritySpacing.sectionSpacing))
             
-            // Settings Section
-            ClaritySectionHeader(text = "Settings")
-            
-            ClarityCard {
-                ClarityListItem(
-                    primaryText = "Notifications",
-                    secondaryText = "Manage notification preferences",
-                    onClick = { /* Navigate to notifications */ },
-                    trailingIcon = Icons.Default.ArrowForward
-                )
-                
-                ClarityListItem(
-                    primaryText = "Payment Methods",
-                    secondaryText = "Manage cards and payment options",
-                    onClick = { /* Navigate to payment */ },
-                    trailingIcon = Icons.Default.ArrowForward
-                )
-                
-                ClarityListItem(
-                    primaryText = "Charging History",
-                    secondaryText = "View past charging sessions",
-                    onClick = { /* Navigate to history */ },
-                    trailingIcon = Icons.Default.ArrowForward
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(ClaritySpacing.lg))
-            
-            // Account Section
-            ClaritySectionHeader(text = "Account")
-            
-            ClarityCard {
-                ClarityListItem(
-                    primaryText = "Privacy & Security",
-                    secondaryText = "Manage your data and security",
-                    onClick = { /* Navigate to privacy */ },
-                    trailingIcon = Icons.Default.ArrowForward
-                )
-                
-                ClarityListItem(
-                    primaryText = "Help & Support",
-                    secondaryText = "Get help and contact support",
-                    onClick = { /* Navigate to support */ },
-                    trailingIcon = Icons.Default.ArrowForward
-                )
-                
-                ClarityListItem(
-                    primaryText = "About",
-                    secondaryText = "App version and legal information",
-                    onClick = { /* Navigate to about */ },
-                    trailingIcon = Icons.Default.ArrowForward
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(ClaritySpacing.sectionSpacing))
-            
             // Logout Button
             ClaritySecondaryButton(
                 text = "Sign Out",

@@ -106,7 +106,7 @@ fun StationManagerLoginScreen(
                 Text(
                     text = "Sign in to manage your station",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = ClarityMediumGray,
+                    color = ClarityDarkGray.copy(alpha = 0.85f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = ClaritySpacing.xs, bottom = ClaritySpacing.xxxl)
                 )
@@ -148,14 +148,15 @@ fun StationManagerLoginScreen(
                     Spacer(modifier = Modifier.height(ClaritySpacing.md))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(ClaritySpacing.sm),
+                        shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = ClarityErrorRed.copy(alpha = 0.1f)
+                            containerColor = ClarityErrorRed.copy(alpha = 0.12f)
                         )
                     ) {
                         Text(
                             text = uiState.errorMessage.orEmpty(),
                             style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
                             color = ClarityErrorRed,
                             modifier = Modifier.padding(ClaritySpacing.md)
                         )

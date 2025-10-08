@@ -77,7 +77,7 @@ class ReservationsViewModel @Inject constructor(
                             "Filter upcoming: id=${reservation.id}, status='${reservation.status}' (upper='$statusUpper'), isFuture=$isFutureReservation, isActive=$isActiveStatus, isInProgress=$isInProgress"
                         )
                         (isInProgress || isFutureReservation) && isActiveStatus
-                    }.sortedBy { it.startTime }
+                    }.sortedByDescending { it.startTime }
 
                     val upcomingIds = upcoming.map { it.id }.toSet()
 

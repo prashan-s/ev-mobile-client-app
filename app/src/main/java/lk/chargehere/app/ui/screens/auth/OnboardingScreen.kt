@@ -142,7 +142,7 @@ fun OnboardingScreen(
                                 if (isSelected) {
                                     ClarityAccentBlue
                                 } else {
-                                    ClarityMediumGray.copy(alpha = 0.3f)
+                                    ClarityMediumGray.copy(alpha = 0.4f)
                                 }
                             )
                     )
@@ -210,8 +210,9 @@ fun OnboardingScreen(
                 Text(
                     text = "Station Operator Sign In",
                     style = MaterialTheme.typography.bodySmall,
-                    color = ClarityMediumGray.copy(alpha = 0.6f),
-                    fontSize = 12.sp
+                    color = ClarityMediumGray.copy(alpha = 0.75f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
 
@@ -268,7 +269,7 @@ private fun OnboardingPageContent(
             text = page.description,
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = ClarityMediumGray,
+            color = ClarityDarkGray.copy(alpha = 0.85f),
             lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.4,
             modifier = Modifier.padding(horizontal = ClaritySpacing.lg)
         )
