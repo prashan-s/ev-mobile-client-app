@@ -23,6 +23,7 @@ import lk.chargehere.app.domain.model.Station
 import lk.chargehere.app.ui.viewmodel.SearchViewModel
 import lk.chargehere.app.ui.components.*
 import lk.chargehere.app.ui.theme.*
+import lk.chargehere.app.ui.utils.keyboardImePadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +38,9 @@ fun ModernSearchScreen(
     // === CLARITY DESIGN SYSTEM IMPLEMENTATION ===
     ClarityBackground {
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .keyboardImePadding()
         ) {
             // Top spacing for status bar
             Spacer(modifier = Modifier.height(ClaritySpacing.xxxl))

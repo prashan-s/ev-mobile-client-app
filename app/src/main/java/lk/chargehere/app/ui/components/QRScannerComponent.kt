@@ -179,7 +179,7 @@ private fun CameraPreviewWithScanner(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = ClaritySpacing.md, end = ClaritySpacing.md, bottom = ClaritySpacing.md)
-                .padding(end = 20.dp)
+                .padding(end = 60.dp)
         ) {
             IconButton(
                 onClick = {

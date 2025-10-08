@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import lk.chargehere.app.ui.components.ChargeHereButton
 import lk.chargehere.app.ui.components.ChargeHereTextField
+import lk.chargehere.app.ui.utils.keyboardImePadding
 
 @Composable
 fun LoginScreen(
@@ -45,6 +46,7 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .keyboardImePadding()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center

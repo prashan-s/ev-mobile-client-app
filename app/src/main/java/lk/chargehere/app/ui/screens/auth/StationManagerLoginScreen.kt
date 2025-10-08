@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import lk.chargehere.app.ui.components.*
 import lk.chargehere.app.ui.theme.*
+import lk.chargehere.app.ui.utils.keyboardImePadding
 
 @Composable
 fun StationManagerLoginScreen(
@@ -62,13 +63,14 @@ fun StationManagerLoginScreen(
 
             Spacer(modifier = Modifier.height(ClaritySpacing.xl))
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
+                .keyboardImePadding(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
                 // Modern Logo with gradient
                 Box(
                     modifier = Modifier

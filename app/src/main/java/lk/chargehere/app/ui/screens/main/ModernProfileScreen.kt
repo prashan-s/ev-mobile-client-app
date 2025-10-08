@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import lk.chargehere.app.ui.viewmodel.ProfileViewModel
 import lk.chargehere.app.ui.components.*
 import lk.chargehere.app.ui.theme.*
+import lk.chargehere.app.ui.utils.keyboardAwareScrollPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +51,7 @@ fun ModernProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
+                .keyboardAwareScrollPadding()
                 .padding(ClaritySpacing.md)
         ) {
             // Profile Header Section

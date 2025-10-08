@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import lk.chargehere.app.ui.components.*
 import lk.chargehere.app.ui.theme.*
 import lk.chargehere.app.auth.TokenManager
+import lk.chargehere.app.ui.utils.keyboardImePadding
 
 @Composable
 fun OperatorHomeScreen(
@@ -271,7 +272,7 @@ fun QRScannerScreen(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close",
                     tint = ClarityPureWhite,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(68.dp)
                 )
             }
 
@@ -305,6 +306,7 @@ fun QRScannerScreen(
                             )
                         )
                     )
+                    .keyboardImePadding()
                     .padding(ClaritySpacing.lg)
             ) {
                 Card(

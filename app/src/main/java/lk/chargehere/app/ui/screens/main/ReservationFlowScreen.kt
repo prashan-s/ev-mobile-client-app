@@ -20,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import lk.chargehere.app.ui.components.*
 import lk.chargehere.app.ui.theme.*
 import lk.chargehere.app.ui.viewmodel.ReservationViewModel
+import lk.chargehere.app.ui.utils.keyboardAwareScrollPadding
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -48,7 +49,11 @@ fun ReservationFlowScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         ClarityBackground {
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .keyboardAwareScrollPadding()
+            ) {
                 // Header
                 ClarityDetailHeader(
                     title = "Create Booking",

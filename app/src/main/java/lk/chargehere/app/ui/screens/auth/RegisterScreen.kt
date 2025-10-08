@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import lk.chargehere.app.ui.components.*
+import lk.chargehere.app.ui.utils.keyboardAwareScrollPadding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,7 +62,8 @@ fun RegisterScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp)
-                .verticalScroll(scrollState),
+                .verticalScroll(scrollState)
+                .keyboardAwareScrollPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(24.dp))
