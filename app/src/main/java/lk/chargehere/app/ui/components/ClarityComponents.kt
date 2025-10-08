@@ -876,3 +876,54 @@ fun BookingCardShimmer(modifier: Modifier = Modifier) {
         }
     }
 }
+
+/**
+ * Success toast notification with icon
+ */
+@Composable
+fun ClaritySuccessToast(
+    message: String,
+    modifier: Modifier = Modifier,
+    icon: ImageVector = Icons.Default.CheckCircle
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(12.dp)
+            ),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = ClaritySurfaceWhite
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(ClaritySpacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(ClaritySpacing.md)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(ClaritySuccessGreen.copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = ClaritySuccessGreen,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = ClarityDarkGray,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}

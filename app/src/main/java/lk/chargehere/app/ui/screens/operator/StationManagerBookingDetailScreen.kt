@@ -42,6 +42,8 @@ fun StationManagerBookingDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showCompleteDialog by remember { mutableStateOf(false) }
+    var showSuccessToast by remember { mutableStateOf(false) }
+    var toastMessage by remember { mutableStateOf("") }
 
     LaunchedEffect(bookingId) {
         viewModel.loadBooking(bookingId)
@@ -50,7 +52,19 @@ fun StationManagerBookingDetailScreen(
     LaunchedEffect(uiState.completionSuccess) {
         if (uiState.completionSuccess) {
             showCompleteDialog = false
+
+            // Get booking number or ID for toast
+            val displayId = uiState.booking?.bookingNumber
+                ?: uiState.completedBookingId?.takeLast(8)?.uppercase()
+                ?: "Unknown"
+            toastMessage = "$displayId Completed!"
+            showSuccessToast = true
+
+            // Hide toast after 3 seconds and navigate back
+            kotlinx.coroutines.delay(3000)
+            showSuccessToast = false
             viewModel.onCompletionHandled()
+            kotlinx.coroutines.delay(300) // Small delay for toast animation
             onNavigateBack()
         }
     }
@@ -201,6 +215,30 @@ fun StationManagerBookingDetailScreen(
                 onConfirm = {
                     viewModel.completeBooking(bookingId)
                 }
+            )
+        }
+
+        // Success toast notification
+        AnimatedVisibility(
+            visible = showSuccessToast,
+            enter = slideInVertically(
+                initialOffsetY = { -it },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            ) + fadeIn(),
+            exit = slideOutVertically(
+                targetOffsetY = { -it },
+                animationSpec = tween(300)
+            ) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(ClaritySpacing.md)
+        ) {
+            ClaritySuccessToast(
+                message = toastMessage,
+                icon = Icons.Default.CheckCircle
             )
         }
     }

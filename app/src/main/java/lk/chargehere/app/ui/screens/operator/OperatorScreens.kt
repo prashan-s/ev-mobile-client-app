@@ -28,9 +28,18 @@ import lk.chargehere.app.ui.utils.keyboardImePadding
 fun OperatorHomeScreen(
     onNavigateToQRScanner: () -> Unit,
     onNavigateToAuth: () -> Unit,
-    tokenManager: TokenManager = hiltViewModel<OperatorHomeViewModel>().tokenManager
+    viewModel: OperatorHomeViewModel = hiltViewModel()
 ) {
+    val tokenManager = viewModel.tokenManager
     val stationName = tokenManager.getStationName()
+    val signOutState by viewModel.signOutState.collectAsState()
+
+    // Handle sign out success
+    LaunchedEffect(signOutState) {
+        if (signOutState is SignOutState.Success) {
+            onNavigateToAuth()
+        }
+    }
 
     // Pulse animation for the QR icon
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -74,19 +83,27 @@ fun OperatorHomeScreen(
             horizontalArrangement = Arrangement.End
         ) {
             Surface(
-                onClick = onNavigateToAuth,
+                onClick = { viewModel.signOut() },
                 modifier = Modifier.size(40.dp),
                 shape = CircleShape,
                 color = ClaritySurfaceWhite,
                 shadowElevation = 2.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Logout,
-                        contentDescription = "Sign Out",
-                        tint = ClarityDarkGray,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    if (signOutState is SignOutState.Loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = ClarityAccentBlue
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = "Sign Out",
+                            tint = ClarityDarkGray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -137,23 +154,24 @@ fun OperatorHomeScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Center QR scanner button with animated design
+            // Center QR scanner card with enhanced design
             ClarityCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(ClaritySpacing.lg),
+                        .padding(ClaritySpacing.xl),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
+                    Spacer(modifier = Modifier.height(ClaritySpacing.md))
+
                     // QR icon with animated gradient background
                     Box(
                         modifier = Modifier
-                            .size(140.dp)
+                            .size(160.dp)
                             .scale(pulseScale)
                             .background(
                                 brush = Brush.radialGradient(
@@ -170,41 +188,44 @@ fun OperatorHomeScreen(
                             imageVector = Icons.Default.QrCodeScanner,
                             contentDescription = "QR Scanner",
                             tint = ClarityAccentBlue,
-                            modifier = Modifier.size(70.dp)
+                            modifier = Modifier.size(80.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(ClaritySpacing.xl))
+                    Spacer(modifier = Modifier.height(ClaritySpacing.xxl))
 
                     Text(
                         text = "Scan Customer QR",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = ClarityDarkGray
-                    )
-
-                    Spacer(modifier = Modifier.height(ClaritySpacing.xs))
-
-                    Text(
-                        text = "Scan the QR code to view booking details and start the charging session",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ClarityMediumGray,
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = ClarityDarkGray,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(ClaritySpacing.xl))
+                    Spacer(modifier = Modifier.height(ClaritySpacing.sm))
 
+                    Text(
+                        text = "Scan the QR code to view booking details and start the charging session",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = ClarityMediumGray,
+                        textAlign = TextAlign.Center,
+                        lineHeight = 24.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Primary scan button
                     Surface(
                         onClick = onNavigateToQRScanner,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(ClaritySpacing.md),
+                        shape = RoundedCornerShape(12.dp),
                         color = ClarityAccentBlue,
                         shadowElevation = 8.dp
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 16.dp),
+                                .padding(vertical = 18.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -212,17 +233,20 @@ fun OperatorHomeScreen(
                                 imageVector = Icons.Default.QrCodeScanner,
                                 contentDescription = null,
                                 tint = ClarityPureWhite,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(26.dp)
                             )
-                            Spacer(modifier = Modifier.width(ClaritySpacing.sm))
+                            Spacer(modifier = Modifier.width(ClaritySpacing.md))
                             Text(
-                                text = "Open Scanner",
-                                style = MaterialTheme.typography.titleMedium,
+                                text = "Scan QR Code",
+                                style = MaterialTheme.typography.titleLarge,
                                 color = ClarityPureWhite,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(ClaritySpacing.md))
                 }
             }
 

@@ -19,7 +19,8 @@ data class StationManagerBookingUiState(
     val error: String? = null,
     val isCompleting: Boolean = false,
     val completionError: String? = null,
-    val completionSuccess: Boolean = false
+    val completionSuccess: Boolean = false,
+    val completedBookingId: String? = null
 )
 
 @HiltViewModel
@@ -65,7 +66,8 @@ class StationManagerBookingViewModel @Inject constructor(
                 is Result.Success -> {
                     _uiState.value = _uiState.value.copy(
                         isCompleting = false,
-                        completionSuccess = true
+                        completionSuccess = true,
+                        completedBookingId = bookingId
                     )
                 }
                 is Result.Error -> {
@@ -86,6 +88,9 @@ class StationManagerBookingViewModel @Inject constructor(
     }
 
     fun onCompletionHandled() {
-        _uiState.value = _uiState.value.copy(completionSuccess = false)
+        _uiState.value = _uiState.value.copy(
+            completionSuccess = false,
+            completedBookingId = null
+        )
     }
 }
