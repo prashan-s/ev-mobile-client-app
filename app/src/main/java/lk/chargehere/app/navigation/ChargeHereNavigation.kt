@@ -52,9 +52,6 @@ fun ChargeHereNavigation(
                 OnboardingScreen(
                     onNavigateToLogin = {
                         navController.navigate(Screen.Login.route)
-                    },
-                    onNavigateToStationManagerLogin = {
-                        navController.navigate(Screen.StationManagerLogin.route)
                     }
                 )
             }
@@ -83,9 +80,7 @@ fun ChargeHereNavigation(
                         }
                     },
                     onNavigateToOperator = {
-                        navController.navigate(NavigationGraph.Operator.route) {
-                            popUpTo(NavigationGraph.Auth.route) { inclusive = true }
-                        }
+                        navController.navigate(Screen.StationManagerLogin.route)
                     }
                 )
             }

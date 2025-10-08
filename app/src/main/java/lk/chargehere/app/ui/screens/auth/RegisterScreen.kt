@@ -28,12 +28,14 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import lk.chargehere.app.ui.components.*
 import lk.chargehere.app.ui.utils.keyboardAwareScrollPadding
+import lk.chargehere.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onNavigateToMain: () -> Unit,
     onNavigateBack: () -> Unit,
+    onNavigateToOperator: () -> Unit = {},
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -229,7 +231,7 @@ fun RegisterScreen(
             )
             
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Text(
                 text = "By creating an account you agree to our Terms of Service and acknowledge our Privacy Policy.",
                 style = MaterialTheme.typography.bodySmall,
@@ -237,7 +239,22 @@ fun RegisterScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
                 lineHeight = 18.sp
             )
-            
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(
+                onClick = onNavigateToOperator,
+                enabled = !uiState.isLoading
+            ) {
+                Text(
+                    text = "Station Operator Sign In",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ClarityMediumGray.copy(alpha = 0.75f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }

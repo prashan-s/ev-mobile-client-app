@@ -6,9 +6,9 @@ import lk.chargehere.app.data.remote.dto.*
 
 interface OperatorApiService {
     
-    @POST("/api/v1/validateSession")
+    @POST("api/v1/validateSession")
     suspend fun validateSession(@Body request: ValidateSessionRequest): Response<ValidateSessionResponse>
     
-    @POST("/api/v1/closeSession")
+    @POST("api/v1/closeSession")
     suspend fun closeSession(@Body request: CloseSessionRequest): Response<MessageResponse>
 }

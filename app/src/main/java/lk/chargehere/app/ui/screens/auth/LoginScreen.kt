@@ -4,13 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -28,10 +31,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import lk.chargehere.app.ui.components.ChargeHereButton
 import lk.chargehere.app.ui.components.ChargeHereTextField
 import lk.chargehere.app.ui.utils.keyboardImePadding
+import lk.chargehere.app.ui.theme.*
 
 @Composable
 fun LoginScreen(
@@ -42,16 +47,42 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
-    
-    Column(
+    val scrollState = rememberScrollState()
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .keyboardImePadding()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .keyboardImePadding()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Station Operator link at top right (less noticeable)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onNavigateToOperator,
+                    enabled = !uiState.isLoading
+                ) {
+                    Text(
+                        text = "Operator",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ClarityMediumGray.copy(alpha = 0.5f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
         // Logo and branding
         Box(
             modifier = Modifier
@@ -78,11 +109,20 @@ fun LoginScreen(
         )
         
         Text(
-            text = "Sign in to find and reserve charging stations",
+            text = "EV Owner Sign In",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
-            modifier = Modifier.padding(top = 8.dp, bottom = 32.dp)
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+
+        Text(
+            text = "Find and reserve charging stations",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            modifier = Modifier.padding(top = 4.dp, bottom = 32.dp)
         )
         
         ChargeHereTextField(
@@ -146,18 +186,24 @@ fun LoginScreen(
             enabled = !uiState.isLoading,
             modifier = Modifier.fillMaxWidth()
         )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
+
+        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Register button at the bottom
         TextButton(
             onClick = onNavigateToRegister,
-            enabled = !uiState.isLoading
+            enabled = !uiState.isLoading,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 text = "Don't have an account? Create one",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
         }
     }
     

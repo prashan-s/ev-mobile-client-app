@@ -7,26 +7,26 @@ import lk.chargehere.app.data.remote.dto.*
 interface ReservationApiService {
     
     // Create Booking - POST /api/v1/bookings
-    @POST("/api/v1/bookings")
+    @POST("api/v1/bookings")
     suspend fun createBooking(@Body request: CreateBookingRequest): Response<CreateBookingResponse>
     
     // Get Booking by ID - GET /api/v1/bookings/{id}
-    @GET("/api/v1/bookings/{id}")
+    @GET("api/v1/bookings/{id}")
     suspend fun getBookingById(@Path("id") bookingId: String): Response<BookingDetailDto>
     
     // Get Bookings for current EV owner - GET /api/v1/evowners/bookings
-    @GET("/api/v1/evowners/bookings")
+    @GET("api/v1/evowners/bookings")
     suspend fun getMyBookings(): Response<List<BookingDetailDto>>
     
     // Cancel Booking - POST /api/v1/bookings/{id}/cancel
-    @POST("/api/v1/bookings/{id}/cancel")
+    @POST("api/v1/bookings/{id}/cancel")
     suspend fun cancelBooking(
         @Path("id") bookingId: String,
         @Body request: CancelBookingRequest
     ): Response<Unit>
     
     // Get All Bookings (with filters) - GET /api/v1/bookings
-    @GET("/api/v1/bookings")
+    @GET("api/v1/bookings")
     suspend fun getAllBookings(
         @Query("page") page: Int = 1,
         @Query("pageSize") pageSize: Int = 10,
@@ -39,6 +39,6 @@ interface ReservationApiService {
     ): Response<PaginatedBookingsResponse>
 
     // Complete Booking - POST /api/v1/bookings/{id}/complete
-    @POST("/api/v1/bookings/{id}/complete")
+    @POST("api/v1/bookings/{id}/complete")
     suspend fun completeBooking(@Path("id") bookingId: String): Response<Unit>
 }

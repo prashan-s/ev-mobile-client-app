@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import lk.chargehere.app.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,13 +89,18 @@ fun ChargeHereTextField(
             maxLines = maxLines,
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                errorBorderColor = MaterialTheme.colorScheme.error,
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                focusedBorderColor = ClarityAccentBlue,
+                unfocusedBorderColor = ClarityLightGray,
+                errorBorderColor = ClarityErrorRed,
+                focusedTextColor = ClarityDarkGray,
+                unfocusedTextColor = ClarityDarkGray,
+                focusedContainerColor = ClarityPureWhite,
+                unfocusedContainerColor = ClarityPureWhite,
+                focusedLabelColor = ClarityAccentBlue,
+                unfocusedLabelColor = ClarityMediumGray,
+                focusedPlaceholderColor = ClarityMediumGray.copy(alpha = 0.6f),
+                unfocusedPlaceholderColor = ClarityMediumGray.copy(alpha = 0.6f),
+                cursorColor = ClarityAccentBlue
             ),
             textStyle = LocalTextStyle.current.copy(
                 fontWeight = FontWeight.Medium,

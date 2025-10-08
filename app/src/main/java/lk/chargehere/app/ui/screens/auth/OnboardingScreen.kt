@@ -37,8 +37,7 @@ data class OnboardingPage(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OnboardingScreen(
-    onNavigateToLogin: () -> Unit,
-    onNavigateToStationManagerLogin: () -> Unit = {}
+    onNavigateToLogin: () -> Unit
 ) {
     val pages = listOf(
         OnboardingPage(
@@ -118,13 +117,17 @@ fun OnboardingScreen(
 
             Spacer(modifier = Modifier.height(ClaritySpacing.xxxl))
 
-            // Modern Pager with animation
+            // Modern Pager with animation - Fixed height
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(350.dp)
             ) { page ->
                 OnboardingPageContent(page = pages[page])
             }
+
+            Spacer(modifier = Modifier.weight(1f))
 
             // Modern Page indicators
             Row(
@@ -149,23 +152,18 @@ fun OnboardingScreen(
                 }
             }
 
-            // Action buttons
+            // Action buttons - Fixed height container to prevent jumping
             AnimatedVisibility(
                 visible = isLastPage,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    ChargeHereButton(
-                        text = "Get Started",
-                        onClick = onNavigateToLogin,
-                        variant = ButtonVariant.Primary,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                ChargeHereButton(
+                    text = "Get Started",
+                    onClick = onNavigateToLogin,
+                    variant = ButtonVariant.Primary,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             AnimatedVisibility(
@@ -198,22 +196,6 @@ fun OnboardingScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
-            }
-
-            Spacer(modifier = Modifier.height(ClaritySpacing.lg))
-
-            // Subtle station operator button
-            TextButton(
-                onClick = onNavigateToStationManagerLogin,
-                modifier = Modifier.padding(vertical = ClaritySpacing.sm)
-            ) {
-                Text(
-                    text = "Station Operator Sign In",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = ClarityMediumGray.copy(alpha = 0.75f),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
             }
 
             Spacer(modifier = Modifier.height(ClaritySpacing.md))
